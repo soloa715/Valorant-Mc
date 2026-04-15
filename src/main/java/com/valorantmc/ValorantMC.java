@@ -22,6 +22,7 @@ public final class ValorantMC extends JavaPlugin {
     private AbilityManager abilityManager;
     private MapManager mapManager;
     private StatsManager statsManager;
+    private com.valorantmc.listeners.AbilityListener abilityListener;
 
     private FileConfiguration messages;
 
@@ -54,12 +55,19 @@ public final class ValorantMC extends JavaPlugin {
         getCommand("vshop").setExecutor(cmd);
         getCommand("vagent").setExecutor(cmd);
         getCommand("vstats").setExecutor(cmd);
+        getCommand("vreload").setExecutor(cmd);
+        getCommand("vdropspike").setExecutor(cmd);
+        getCommand("vwalk").setExecutor(cmd);
+        getCommand("vuse").setExecutor(cmd);
+        getCommand("vskin").setExecutor(cmd);
+        getCommand("vplay").setExecutor(cmd);
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new WeaponListener(this), this);
         getServer().getPluginManager().registerEvents(new GameListener(this), this);
         getServer().getPluginManager().registerEvents(new ShopListener(this), this);
-        getServer().getPluginManager().registerEvents(new AbilityListener(this), this);
+        abilityListener = new AbilityListener(this);
+        getServer().getPluginManager().registerEvents(abilityListener, this);
 
         // Resource pack prompt
         if (getConfig().getBoolean("resource-pack.enabled")) {
@@ -97,6 +105,7 @@ public final class ValorantMC extends JavaPlugin {
     public AbilityManager getAbilityManager() { return abilityManager; }
     public MapManager     getMapManager()     { return mapManager;     }
     public StatsManager   getStatsManager()   { return statsManager;   }
+    public com.valorantmc.listeners.AbilityListener getAbilityListener() { return abilityListener; }
 
     public FileConfiguration getMessages() { return messages; }
 

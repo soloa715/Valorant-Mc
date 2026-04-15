@@ -61,6 +61,8 @@ public class ValorantGame {
 
     // ── Tasks ─────────────────────────────────────────────────────────────────
     private BukkitTask timerTask;
+    private BukkitTask agentSelectTask;
+    private BukkitTask buyPhaseTask;
 
     // ── Constants ─────────────────────────────────────────────────────────────
     private static final int ROUNDS_TO_WIN = 13;
@@ -93,12 +95,24 @@ public class ValorantGame {
     }
 
     public void removePlayer(Player p) {
+        if (bossBar != null) p.hideBossBar(bossBar);
         attackers.removePlayer(p);
         defenders.removePlayer(p);
         playerAgents.remove(p.getUniqueId());
         playerWeapons.remove(p.getUniqueId());
         playerHealth.remove(p.getUniqueId());
         playerShield.remove(p.getUniqueId());
+        plugin.getWeaponManager().clearPlayer(p);
+        if (Bukkit.getScoreboardManager() != null) {
+            p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+        }
+        if (p.isOnline()) {
+            p.getInventory().clear();
+            p.setGameMode(GameMode.SURVIVAL);
+            p.setHealth(20);
+        }
+        // Cancel any in-progress plant/defuse for this player
+        if (plugin.getAbilityListener() != null) plugin.getAbilityListener().cancelFor(p);
         updateScoreboard();
         p.sendMessage(plugin.msg("game.leave"));
     }
@@ -110,12 +124,57 @@ public class ValorantGame {
 
         state = GameState.AGENT_SELECT;
         broadcast(plugin.msgRaw("game.game-started"));
-        broadcast(ValorantMC.colorize("&eSelect your agent with &b/vagent"));
+        broadcast(ValorantMC.colorize("&eSelect your agent with &b/vagent &7(required to proceed!)"));
 
-        // Agent select lasts 20 seconds then auto-starts
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            startBuyPhase();
-        }, 20 * 20L);
+        // Open agent-select GUI for everyone & teleport to spawns so they can preview
+        teleportToSpawns();
+        getAllPlayers().forEach(p -> {
+            p.setGameMode(GameMode.ADVENTURE);
+            p.getInventory().clear();
+            p.openInventory(com.valorantmc.shop.AgentSelectGUI.build(p));
+            p.sendMessage(ValorantMC.colorize("&a&lPick an agent to join the round!"));
+        });
+
+        // Poll until every player has an agent, or 45s cap
+        final int maxWaitTicks = 20 * 45;
+        final int agentSelectSeconds = 45;
+        final int[] elapsed = {0};
+        startBossBar(BossBar.Color.PURPLE, "AGENT SELECT — 0:45", 1f);
+        if (agentSelectTask != null) agentSelectTask.cancel();
+        agentSelectTask = new BukkitRunnable() {
+            @Override public void run() {
+                elapsed[0] += 20;
+                boolean everyonePicked = getAllPlayers().stream()
+                        .allMatch(p -> playerAgents.containsKey(p.getUniqueId()));
+                int remaining = Math.max(0, (maxWaitTicks - elapsed[0]) / 20);
+                updateBossBar("AGENT SELECT — " + formatTime(remaining),
+                        (float) remaining / agentSelectSeconds);
+                getAllPlayers().forEach(p -> {
+                    if (!playerAgents.containsKey(p.getUniqueId())) {
+                        p.sendActionBar(ValorantMC.colorize("&c&lPICK AN AGENT! &7(" + remaining + "s)"));
+                    } else {
+                        p.sendActionBar(ValorantMC.colorize("&aReady — waiting for others (" + remaining + "s)"));
+                    }
+                });
+                if (everyonePicked || elapsed[0] >= maxWaitTicks) {
+                    // Auto-assign a random agent to anyone still missing
+                    for (Player p : getAllPlayers()) {
+                        if (!playerAgents.containsKey(p.getUniqueId())) {
+                            com.valorantmc.agents.Agent random =
+                                    plugin.getAgentManager().getRandomAgent();
+                            if (random != null) {
+                                setAgent(p, random);
+                                p.sendMessage(ValorantMC.colorize(
+                                        "&eAuto-assigned agent: &b" + random.getDisplayName()));
+                            }
+                        }
+                        p.closeInventory();
+                    }
+                    startBuyPhase();
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 20L, 20L);
     }
 
     private void startBuyPhase() {
@@ -136,15 +195,18 @@ public class ValorantGame {
         broadcast(ValorantMC.colorize("&7Use &b/vshop&7 to buy weapons and abilities."));
 
         updateScoreboard();
-        startBossBar(BossBar.Color.YELLOW, "Buy Phase - " + buyDuration + "s", 1f);
+        final String buyLabel = "ROUND " + currentRound + " • BUY PHASE — ";
+        startBossBar(BossBar.Color.YELLOW, buyLabel + formatTime(buyDuration), 1f);
 
         // Buy phase countdown
-        new BukkitRunnable() {
+        if (buyPhaseTask != null) buyPhaseTask.cancel();
+        buyPhaseTask = new BukkitRunnable() {
             int remaining = buyDuration;
             @Override public void run() {
                 if (state != GameState.BUY_PHASE) { cancel(); return; }
                 remaining--;
-                updateBossBar(remaining + "s", (float) remaining / buyDuration);
+                updateBossBar(buyLabel + formatTime(remaining),
+                        Math.max(0f, (float) remaining / Math.max(1, buyDuration)));
                 if (remaining <= 0) { startRound(); cancel(); }
             }
         }.runTaskTimer(plugin, 20L, 20L);
@@ -164,14 +226,20 @@ public class ValorantGame {
         }
 
         updateScoreboard();
-        startBossBar(BossBar.Color.RED, "Round " + currentRound + " - " + roundDuration + "s", 1f);
+        final String roundLabel = "ROUND " + currentRound + " • LIVE — ";
+        startBossBar(BossBar.Color.RED, roundLabel + formatTime(roundDuration), 1f);
 
         timerTask = new BukkitRunnable() {
             int remaining = roundDuration;
             @Override public void run() {
                 if (state != GameState.ROUND_ACTIVE) { cancel(); return; }
                 remaining--;
-                updateBossBar(formatTime(remaining), (float) remaining / roundDuration);
+                if (spike.isPlanted()) {
+                    updateBossBar("ROUND " + currentRound + " • SPIKE PLANTED", 1f);
+                } else {
+                    updateBossBar(roundLabel + formatTime(remaining),
+                            Math.max(0f, (float) remaining / Math.max(1, roundDuration)));
+                }
 
                 if (remaining <= 0) {
                     // Time up — defenders win (spike not planted)
@@ -251,10 +319,15 @@ public class ValorantGame {
 
     public void shutdown() {
         if (timerTask != null) timerTask.cancel();
+        if (agentSelectTask != null) agentSelectTask.cancel();
+        if (buyPhaseTask != null) buyPhaseTask.cancel();
         spike.reset();
         if (bossBar != null) {
+            getAllPlayers().forEach(p -> p.hideBossBar(bossBar));
+        }
+        if (Bukkit.getScoreboardManager() != null) {
             getAllPlayers().forEach(p ->
-                    p.hideBossBar(bossBar));
+                    p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard()));
         }
     }
 
@@ -370,13 +443,15 @@ public class ValorantGame {
     private void giveStartingWeapons() {
         getAllPlayers().forEach(p -> {
             p.getInventory().clear();
-            // Give free Classic pistol
+            // Slot 0 = primary (empty until bought), Slot 1 = Classic, Slot 2 = Knife
             Weapon classic = new Weapon(WeaponType.CLASSIC);
-            p.getInventory().setItem(8, classic.toItemStack(p.getUniqueId()));
-            // Give knife
+            p.getInventory().setItem(1, classic.toItemStack(p.getUniqueId()));
             Weapon knife = new Weapon(WeaponType.KNIFE);
-            p.getInventory().setItem(7, knife.toItemStack(p.getUniqueId()));
-            p.getInventory().setHeldItemSlot(0);
+            p.getInventory().setItem(2, knife.toItemStack(p.getUniqueId()));
+            // Hold the Classic by default so players can immediately shoot
+            p.getInventory().setHeldItemSlot(1);
+            // Prime WeaponManager state so first shot works
+            plugin.getWeaponManager().setHeldWeapon(p, classic);
         });
     }
 
@@ -392,7 +467,7 @@ public class ValorantGame {
                 new org.bukkit.NamespacedKey(plugin, "spike"),
                 org.bukkit.persistence.PersistentDataType.BOOLEAN, true);
         spikeItem.setItemMeta(m);
-        p.getInventory().setItem(4, spikeItem);
+        p.getInventory().setItem(3, spikeItem);
     }
 
     private void reviveAll() {
@@ -429,6 +504,10 @@ public class ValorantGame {
             return;
         }
         plugin.getMapManager().ensureBuilt(map);
+        attackSpawns.clear();
+        defendSpawns.clear();
+        siteALocations.clear();
+        siteBLocations.clear();
         attackSpawns.addAll(map.getAttackSpawns());
         defendSpawns.addAll(map.getDefendSpawns());
         siteALocations.addAll(map.getSiteA());

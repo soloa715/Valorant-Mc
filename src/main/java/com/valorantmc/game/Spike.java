@@ -3,6 +3,8 @@ package com.valorantmc.game;
 import com.valorantmc.ValorantMC;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -32,6 +34,11 @@ public class Spike {
     private BukkitTask beepTask;
     private BukkitTask detonationTask;
     private int detonationCountdown;
+
+    // Visible plant marker
+    private ArmorStand plantVisual;
+    private Location plantBlockLoc;
+    private Material prevBlockType;
 
     public Spike(ValorantGame game) {
         this.game = game;
@@ -63,6 +70,7 @@ public class Spike {
         if (state != SpikeState.PLANTING) return;
         state = SpikeState.PLANTED;
         plantLocation = attacker.getLocation();
+        spawnPlantVisual();
 
         game.broadcast(ValorantMC.colorize("&c&lSPIKE PLANTED! Defenders: defuse it or everyone dies!"));
         game.broadcast(ValorantMC.colorize("&c" + attacker.getName() + " planted the Spike!"));
@@ -94,6 +102,7 @@ public class Spike {
         if (state != SpikeState.DEFUSING) return;
         state = SpikeState.DEFUSED;
         cancelTasks();
+        removePlantVisual();
 
         game.broadcast(ValorantMC.colorize("&b&lSPIKE DEFUSED! Defenders win!"));
         ValorantMC.getInstance().getEconomyManager()
@@ -110,6 +119,7 @@ public class Spike {
 
     public void reset() {
         cancelTasks();
+        removePlantVisual();
         state       = SpikeState.IDLE;
         carrierUUID = null;
         plantLocation = null;
@@ -161,6 +171,7 @@ public class Spike {
     private void detonate() {
         state = SpikeState.DETONATED;
         cancelTasks();
+        removePlantVisual();
 
         if (plantLocation != null) {
             plantLocation.getWorld().createExplosion(plantLocation, 0f, false, false);
@@ -174,6 +185,39 @@ public class Spike {
         game.endRound(ValorantTeam.Side.ATTACKERS, "Spike detonated");
     }
 
+    private void spawnPlantVisual() {
+        if (plantLocation == null) return;
+        // Place a redstone block at foot level so everyone can see & walk up to it
+        Block b = plantLocation.getBlock();
+        prevBlockType = b.getType();
+        plantBlockLoc = b.getLocation();
+        b.setType(Material.REDSTONE_BLOCK);
+
+        // Floating glowing armor stand as an unambiguous marker (visible through walls)
+        Location standLoc = plantLocation.clone().add(0.5, 0.3, 0.5);
+        plantVisual = (ArmorStand) plantLocation.getWorld().spawnEntity(standLoc, EntityType.ARMOR_STAND);
+        plantVisual.setInvisible(true);
+        plantVisual.setGravity(false);
+        plantVisual.setMarker(false);
+        plantVisual.setInvulnerable(true);
+        plantVisual.setCustomName(ValorantMC.colorize("&c&lSPIKE"));
+        plantVisual.setCustomNameVisible(true);
+        plantVisual.setGlowing(true);
+        if (plantVisual.getEquipment() != null) {
+            plantVisual.getEquipment().setHelmet(makeSpikeDropItem());
+        }
+    }
+
+    private void removePlantVisual() {
+        if (plantVisual != null && !plantVisual.isDead()) plantVisual.remove();
+        plantVisual = null;
+        if (plantBlockLoc != null && prevBlockType != null) {
+            plantBlockLoc.getBlock().setType(prevBlockType);
+        }
+        plantBlockLoc = null;
+        prevBlockType = null;
+    }
+
     private void cancelTasks() {
         if (beepTask      != null) { beepTask.cancel();      beepTask      = null; }
         if (detonationTask!= null) { detonationTask.cancel();detonationTask = null; }
@@ -185,4 +229,26 @@ public class Spike {
     public Location   getPlantLocation() { return plantLocation; }
     public boolean    isPlanted()        { return state == SpikeState.PLANTED || state == SpikeState.DEFUSING; }
     public boolean    isCarried()        { return state == SpikeState.CARRIED || state == SpikeState.PLANTING; }
+
+    /** Drop the spike (carrier killed or used /vdropspike). */
+    public void drop(Location where) {
+        if (state != SpikeState.CARRIED && state != SpikeState.PLANTING) return;
+        state = SpikeState.IDLE;
+        carrierUUID = null;
+        if (where != null) {
+            where.getWorld().dropItem(where, makeSpikeDropItem());
+            where.getWorld().playSound(where, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 1f, 0.6f);
+        }
+    }
+
+    private org.bukkit.inventory.ItemStack makeSpikeDropItem() {
+        org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.RED_DYE);
+        org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ValorantMC.colorize("&c&lSpike"));
+        meta.getPersistentDataContainer().set(
+                new NamespacedKey(ValorantMC.getInstance(), "spike"),
+                org.bukkit.persistence.PersistentDataType.BOOLEAN, true);
+        item.setItemMeta(meta);
+        return item;
+    }
 }
