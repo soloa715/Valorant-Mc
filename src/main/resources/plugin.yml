@@ -1,0 +1,38 @@
+name: ValorantMC
+version: ${project.version}
+main: com.valorantmc.ValorantMC
+api-version: 1.20
+description: Full Valorant experience inside Minecraft
+authors: [ValorantMC Team]
+website: https://github.com/valorantmc
+
+commands:
+  valorant:
+    description: Main ValorantMC command
+    aliases: [val, v]
+    usage: /valorant <subcommand>
+  vshop:
+    description: Open the buy menu
+    aliases: [shop, buy]
+    usage: /vshop
+  vagent:
+    description: Select your agent
+    aliases: [agent]
+    usage: /vagent
+  vskip:
+    description: Vote to skip the buy phase
+    usage: /vskip
+  vstats:
+    description: View your stats
+    usage: /vstats [player]
+
+permissions:
+  valorantmc.admin:
+    description: Full admin access
+    default: op
+  valorantmc.play:
+    description: Play the game
+    default: true
+  valorantmc.shop:
+    description: Use the buy menu
+    default: true

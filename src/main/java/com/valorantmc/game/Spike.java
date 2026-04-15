@@ -1,0 +1,188 @@
+package com.valorantmc.game;
+
+import com.valorantmc.ValorantMC;
+import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.util.UUID;
+
+/**
+ * Represents the Valorant Spike (bomb).
+ *
+ * State machine:
+ *   IDLE -> CARRIED (picked up by attacker)
+ *   CARRIED -> PLANTING (attacker holds USE on a bomb site)
+ *   PLANTING -> PLANTED (plant completes) or CARRIED (interrupted)
+ *   PLANTED -> DETONATED or DEFUSING
+ *   DEFUSING -> DEFUSED or PLANTED (interrupted)
+ */
+public class Spike {
+
+    public enum SpikeState { IDLE, CARRIED, PLANTING, PLANTED, DEFUSING, DETONATED, DEFUSED }
+
+    private final ValorantGame game;
+    private SpikeState state = SpikeState.IDLE;
+    private UUID carrierUUID;
+    private Location plantLocation;
+
+    // Timers
+    private BukkitTask beepTask;
+    private BukkitTask detonationTask;
+    private int detonationCountdown;
+
+    public Spike(ValorantGame game) {
+        this.game = game;
+        this.detonationCountdown = ValorantMC.getInstance().getConfig().getInt("game.spike-timer", 45);
+    }
+
+    // ── API ───────────────────────────────────────────────────────────────────
+
+    public void pickup(Player attacker) {
+        if (state != SpikeState.IDLE) return;
+        carrierUUID = attacker.getUniqueId();
+        state = SpikeState.CARRIED;
+
+        attacker.sendMessage(ValorantMC.getInstance().msg("spike.picked-up"));
+        attacker.playSound(attacker.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
+        game.broadcastExcept(attacker,
+                ValorantMC.colorize("&c" + attacker.getName() + " picked up the Spike!"));
+    }
+
+    public void startPlant(Player attacker) {
+        if (state != SpikeState.CARRIED) return;
+        if (!attacker.getUniqueId().equals(carrierUUID)) return;
+        state = SpikeState.PLANTING;
+        // The actual plant timer is managed by AbilityListener
+        attacker.sendMessage(ValorantMC.colorize("&ePlanting Spike... don't move!"));
+    }
+
+    public void finishPlant(Player attacker) {
+        if (state != SpikeState.PLANTING) return;
+        state = SpikeState.PLANTED;
+        plantLocation = attacker.getLocation();
+
+        game.broadcast(ValorantMC.colorize("&c&lSPIKE PLANTED! Defenders: defuse it or everyone dies!"));
+        game.broadcast(ValorantMC.colorize("&c" + attacker.getName() + " planted the Spike!"));
+
+        // Reward
+        ValorantMC.getInstance().getEconomyManager()
+                .addCredits(attacker.getUniqueId(), ValorantMC.getInstance().getConfig().getInt("game.spike-plant-bonus", 300));
+
+        // Beep
+        startBeepTask();
+        // Detonation countdown
+        startDetonationTask();
+    }
+
+    public void cancelPlant(Player attacker) {
+        if (state == SpikeState.PLANTING && attacker.getUniqueId().equals(carrierUUID)) {
+            state = SpikeState.CARRIED;
+        }
+    }
+
+    public void startDefuse(Player defender) {
+        if (state != SpikeState.PLANTED) return;
+        state = SpikeState.DEFUSING;
+        defender.sendMessage(ValorantMC.colorize("&bDefusing Spike... don't move!"));
+        game.broadcastExcept(defender, ValorantMC.colorize("&b" + defender.getName() + " is defusing the Spike!"));
+    }
+
+    public void finishDefuse(Player defender) {
+        if (state != SpikeState.DEFUSING) return;
+        state = SpikeState.DEFUSED;
+        cancelTasks();
+
+        game.broadcast(ValorantMC.colorize("&b&lSPIKE DEFUSED! Defenders win!"));
+        ValorantMC.getInstance().getEconomyManager()
+                .addCredits(defender.getUniqueId(), ValorantMC.getInstance().getConfig().getInt("game.spike-defuse-bonus", 300));
+        game.endRound(ValorantTeam.Side.DEFENDERS, "Spike defused");
+    }
+
+    public void cancelDefuse(Player defender) {
+        if (state == SpikeState.DEFUSING) {
+            state = SpikeState.PLANTED;
+            defender.sendMessage(ValorantMC.colorize("&cDefuse interrupted!"));
+        }
+    }
+
+    public void reset() {
+        cancelTasks();
+        state       = SpikeState.IDLE;
+        carrierUUID = null;
+        plantLocation = null;
+    }
+
+    // ── Private tasks ─────────────────────────────────────────────────────────
+
+    private void startBeepTask() {
+        int intervalSeconds = ValorantMC.getInstance().getConfig().getInt("sounds.spike-beep-interval", 3);
+        beepTask = new BukkitRunnable() {
+            double pitch = 1.0;
+            @Override
+            public void run() {
+                if (state != SpikeState.PLANTED && state != SpikeState.DEFUSING) {
+                    cancel();
+                    return;
+                }
+                if (plantLocation != null) {
+                    plantLocation.getWorld().playSound(plantLocation,
+                            Sound.BLOCK_NOTE_BLOCK_PLING, 1f, (float) pitch);
+                }
+                pitch = Math.min(2.0, pitch + 0.05);
+            }
+        }.runTaskTimer(ValorantMC.getInstance(), 0L, (long)(intervalSeconds * 20L));
+    }
+
+    private void startDetonationTask() {
+        detonationTask = new BukkitRunnable() {
+            int countdown = detonationCountdown;
+            @Override
+            public void run() {
+                if (state == SpikeState.DEFUSED || state == SpikeState.DETONATED) {
+                    cancel();
+                    return;
+                }
+                if (countdown <= 10 && countdown > 0) {
+                    game.broadcast(ValorantMC.colorize("&c&lSpike detonates in &e" + countdown + "&c&l seconds!"));
+                }
+                if (countdown <= 0) {
+                    detonate();
+                    cancel();
+                } else {
+                    countdown--;
+                }
+            }
+        }.runTaskTimer(ValorantMC.getInstance(), 20L, 20L);
+    }
+
+    private void detonate() {
+        state = SpikeState.DETONATED;
+        cancelTasks();
+
+        if (plantLocation != null) {
+            plantLocation.getWorld().createExplosion(plantLocation, 0f, false, false);
+            plantLocation.getWorld().playSound(plantLocation, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.5f);
+            // Visual: spawn lots of fireworks/particles
+            plantLocation.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, plantLocation, 20);
+            plantLocation.getWorld().spawnParticle(Particle.FLAME, plantLocation, 80, 3, 3, 3, 0.2);
+        }
+
+        game.broadcast(ValorantMC.colorize("&c&lSPIKE DETONATED! Attackers win!"));
+        game.endRound(ValorantTeam.Side.ATTACKERS, "Spike detonated");
+    }
+
+    private void cancelTasks() {
+        if (beepTask      != null) { beepTask.cancel();      beepTask      = null; }
+        if (detonationTask!= null) { detonationTask.cancel();detonationTask = null; }
+    }
+
+    // ── Getters ───────────────────────────────────────────────────────────────
+    public SpikeState getState()         { return state;         }
+    public UUID       getCarrierUUID()   { return carrierUUID;   }
+    public Location   getPlantLocation() { return plantLocation; }
+    public boolean    isPlanted()        { return state == SpikeState.PLANTED || state == SpikeState.DEFUSING; }
+    public boolean    isCarried()        { return state == SpikeState.CARRIED || state == SpikeState.PLANTING; }
+}
