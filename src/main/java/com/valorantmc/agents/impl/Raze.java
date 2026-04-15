@@ -46,7 +46,7 @@ public class Raze extends Agent {
         if (!abilityQ.canUse()) { player.sendMessage(ValorantMC.colorize("&6No Paint Shells charges!")); return; }
         abilityQ.consume();
 
-        Snowball grenade = player.throwSnowball();
+        Snowball grenade = player.launchProjectile(Snowball.class);
         grenade.setMetadata("paint_shells",
                 new org.bukkit.metadata.FixedMetadataValue(ValorantMC.getInstance(), player.getUniqueId().toString()));
         player.sendMessage(ValorantMC.colorize("&6[Raze] &fPaint Shells thrown!"));

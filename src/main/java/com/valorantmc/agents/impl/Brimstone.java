@@ -74,7 +74,7 @@ public class Brimstone extends Agent {
                     if (!game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                     if (p.getLocation().distance(loc) <= 5) {
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.HASTE, 40, 1, false, false));
+                                org.bukkit.potion.PotionEffectType.FAST_DIGGING, 40, 1, false, false));
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.SPEED, 40, 0, false, false));
                     }

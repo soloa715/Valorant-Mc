@@ -32,6 +32,8 @@ weapons:
 maps:
   auto-load: true
   maps-folder: "maps"
+  default-world: "world"
+  arena-y: 100           # Y coordinate where auto-generated arenas are built
 
 # Display
 display:

@@ -67,7 +67,7 @@ public class Omen extends Agent {
                         if (p.equals(player)) continue;
                         if (p.getLocation().distance(current[0]) <= 2.5) {
                             p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0, false, false));
-                            p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false));
+                            p.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 40, 0, false, false));
                         }
                     }
 
@@ -109,7 +109,7 @@ public class Omen extends Agent {
         game.broadcast(ValorantMC.colorize("&5An Omen is teleporting somewhere!"));
 
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 60, 0, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 60, 255, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 60, 255, false, false));
 
         ValorantMC.getInstance().getServer().getScheduler().runTaskLater(ValorantMC.getInstance(), () -> {
             if (player.isOnline()) {

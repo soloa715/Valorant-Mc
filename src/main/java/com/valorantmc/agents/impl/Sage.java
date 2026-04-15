@@ -43,7 +43,7 @@ public class Sage extends Agent {
             block.getBlock().setType(Material.PACKED_ICE);
         }
 
-        player.getWorld().playSound(base, Sound.BLOCK_ICE_PLACE, 1f, 0.8f);
+        player.getWorld().playSound(base, Sound.BLOCK_GLASS_PLACE, 1f, 0.8f);
         player.sendMessage(ValorantMC.colorize("&b[Sage] &fBarrier Orb placed!"));
 
         // Remove wall after 10 seconds
@@ -75,7 +75,7 @@ public class Sage extends Agent {
                 player.getWorld().spawnParticle(Particle.SNOWFLAKE, target.clone().add(0, 0.5, 0), 10, 2, 0.3, 2, 0);
                 for (Player nearby : target.getWorld().getPlayers()) {
                     if (nearby.getLocation().distance(target) <= 3.5) {
-                        nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 2, false, false));
+                        nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 2, false, false));
                         if (game.getTeam(nearby) != null && game.getTeam(player) != null &&
                                 !game.getTeam(nearby).getSide().equals(game.getTeam(player).getSide())) {
                             nearby.sendActionBar(ValorantMC.colorize("&b[Slow] &fSage's Slow Orb!"));

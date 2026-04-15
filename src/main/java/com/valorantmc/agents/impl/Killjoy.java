@@ -147,7 +147,7 @@ public class Killjoy extends Agent {
                         if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                         if (p.getLocation().distance(center) <= 13) {
                             p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                    org.bukkit.potion.PotionEffectType.SLOWNESS, 100, 255, false, false));
+                                    org.bukkit.potion.PotionEffectType.SLOW, 100, 255, false, false));
                             p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                     org.bukkit.potion.PotionEffectType.WEAKNESS, 100, 255, false, false));
                             p.sendMessage(ValorantMC.colorize("&e[Lockdown] &cYou are detained!"));

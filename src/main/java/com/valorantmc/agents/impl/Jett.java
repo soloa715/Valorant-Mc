@@ -35,9 +35,7 @@ public class Jett extends Agent {
         if (!abilityC.canUse()) { player.sendMessage(ValorantMC.colorize("&cCloudburst has no charges!")); return; }
         abilityC.consume();
 
-        Location target = player.getTargetBlockFace(16, false) != null
-                ? player.getLocation().add(player.getLocation().getDirection().multiply(8))
-                : player.getLocation();
+        Location target = player.getLocation().add(player.getLocation().getDirection().multiply(8));
 
         player.getWorld().spawnParticle(Particle.CLOUD, target, 150, 1.5, 1.5, 1.5, 0.02);
         player.getWorld().playSound(target, Sound.ITEM_FIRECHARGE_USE, 1f, 1.2f);

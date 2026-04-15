@@ -46,7 +46,7 @@ public class Reyna extends Agent {
             if (game.getTeam(nearby).getSide().equals(game.getTeam(player).getSide())) continue;
             if (nearby.getLocation().distance(eye) <= 8) {
                 nearby.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS,  30, 0, false, false));
-                nearby.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 30, 0, false, false));
+                nearby.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 30, 0, false, false));
                 nearby.sendActionBar(ValorantMC.colorize("&c[Leer] &fYou've been near-sighted!"));
             }
         }
@@ -76,7 +76,7 @@ public class Reyna extends Agent {
         if (soulOrbs <= 0) { player.sendMessage(ValorantMC.colorize("&cNo soul orbs! Get a kill first.")); return; }
         soulOrbs--;
 
-        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 255, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 255, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 40, 0, false, false));
         player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation(), 50, 0.5, 1, 0.5, 0.2);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
@@ -90,7 +90,7 @@ public class Reyna extends Agent {
         abilityX.activateUlt();
 
         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,       200, 2, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE,       200, 2, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING,       200, 2, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 1, false, false));
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1.5f);
         game.broadcast(ValorantMC.colorize("&c[Reyna] &f" + player.getName() + " activated &cEmpress&f!"));

@@ -424,12 +424,16 @@ public class ValorantGame {
 
     private void loadMap(String name) {
         MapManager.ValorantMap map = plugin.getMapManager().getMap(name);
-        if (map != null) {
-            attackSpawns.addAll(map.getAttackSpawns());
-            defendSpawns.addAll(map.getDefendSpawns());
-            siteALocations.addAll(map.getSiteA());
-            siteBLocations.addAll(map.getSiteB());
+        if (map == null) {
+            plugin.getLogger().warning("Map not found: " + name);
+            return;
         }
+        plugin.getMapManager().ensureBuilt(map);
+        attackSpawns.addAll(map.getAttackSpawns());
+        defendSpawns.addAll(map.getDefendSpawns());
+        siteALocations.addAll(map.getSiteA());
+        siteBLocations.addAll(map.getSiteB());
+        broadcast(ValorantMC.colorize("&a&lMap: &f" + map.getDisplayName()));
     }
 
     // ── Scoreboard ────────────────────────────────────────────────────────────
