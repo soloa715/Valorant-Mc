@@ -33,7 +33,7 @@ public class Omen extends Agent {
         if (!abilityC.canUse()) { player.sendMessage(ValorantMC.colorize("&5No Shrouded Step charges!")); return; }
         abilityC.consume();
 
-        Location dest = player.getTargetBlock(null, 8).getLocation().add(0.5, 1, 0.5);
+        Location dest = safeTarget(player, 8).add(0.5, 1, 0.5);
         if (dest.getBlock().getType() != Material.AIR) { player.sendMessage(ValorantMC.colorize("&cBlocked!")); return; }
 
         player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation(), 30, 0.3, 1, 0.3, 0.2);
@@ -67,7 +67,7 @@ public class Omen extends Agent {
                         if (p.equals(player)) continue;
                         if (p.getLocation().distance(current[0]) <= 2.5) {
                             p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0, false, false));
-                            p.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 40, 0, false, false));
+                            p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false));
                         }
                     }
 
@@ -84,17 +84,18 @@ public class Omen extends Agent {
         if (!abilityE.canUse()) { player.sendMessage(ValorantMC.colorize("&5No Dark Cover charges!")); return; }
         abilityE.consume();
 
-        Location smokeCenter = player.getTargetBlock(null, 20).getLocation().add(0.5, 1.5, 0.5);
+        Location smokeCenter = safeTarget(player, 20).add(0.5, 1.5, 0.5);
         player.getWorld().playSound(smokeCenter, Sound.ITEM_FIRECHARGE_USE, 1f, 0.5f);
 
-        // Smoke lasts 6 seconds
-        ValorantMC.getInstance().getServer().getScheduler().runTaskTimer(ValorantMC.getInstance(), task -> {
-            smokeCenter.getWorld().spawnParticle(Particle.SMOKE_LARGE, smokeCenter, 20, 1.5, 1.5, 1.5, 0.01);
-        }, 0L, 5L);
-
-        ValorantMC.getInstance().getServer().getScheduler().runTaskLater(ValorantMC.getInstance(), () -> {
-            // Smoke dissipates (no action needed, just stop spawning particles)
-        }, 120L);
+        // Smoke lasts 6 seconds (120 ticks), then auto-cancels
+        new org.bukkit.scheduler.BukkitRunnable() {
+            int ticks = 0;
+            @Override public void run() {
+                if (ticks >= 120) { cancel(); return; }
+                smokeCenter.getWorld().spawnParticle(Particle.LARGE_SMOKE, smokeCenter, 20, 1.5, 1.5, 1.5, 0.01);
+                ticks += 5;
+            }
+        }.runTaskTimer(ValorantMC.getInstance(), 0L, 5L);
         player.sendMessage(ValorantMC.colorize("&5[Omen] &fDark Cover placed!"));
     }
 
@@ -105,11 +106,11 @@ public class Omen extends Agent {
         abilityX.activateUlt();
 
         // Teleport to where they're looking (long range)
-        Location dest = player.getTargetBlock(null, 64).getLocation().add(0.5, 1, 0.5);
+        Location dest = safeTarget(player, 64).add(0.5, 1, 0.5);
         game.broadcast(ValorantMC.colorize("&5An Omen is teleporting somewhere!"));
 
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 60, 0, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 60, 255, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 60, 255, false, false));
 
         ValorantMC.getInstance().getServer().getScheduler().runTaskLater(ValorantMC.getInstance(), () -> {
             if (player.isOnline()) {

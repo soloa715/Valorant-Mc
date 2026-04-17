@@ -1,0 +1,22 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 1
+    }
+  ],
+  "result": {
+    "type": "custom",
+    "group": "valorant:currency",
+    "item": {
+      "item": "tacz:ammo",
+      "count": 1,
+      "nbt": {
+        "AmmoId": "valorant:wg50"
+      }
+  }
+},
+  "type": "tacz:gun_smith_table_crafting"
+}

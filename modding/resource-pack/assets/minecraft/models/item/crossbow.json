@@ -1,0 +1,24 @@
+{
+  "parent": "minecraft:item/crossbow",
+  "overrides": [
+    { "predicate": { "custom_model_data": 1001 }, "model": "minecraft:item/valorantmc/classic" },
+    { "predicate": { "custom_model_data": 1002 }, "model": "minecraft:item/valorantmc/shorty" },
+    { "predicate": { "custom_model_data": 1003 }, "model": "minecraft:item/valorantmc/frenzy" },
+    { "predicate": { "custom_model_data": 1004 }, "model": "minecraft:item/valorantmc/ghost" },
+    { "predicate": { "custom_model_data": 1005 }, "model": "minecraft:item/valorantmc/sheriff" },
+    { "predicate": { "custom_model_data": 1006 }, "model": "minecraft:item/valorantmc/stinger" },
+    { "predicate": { "custom_model_data": 1007 }, "model": "minecraft:item/valorantmc/spectre" },
+    { "predicate": { "custom_model_data": 1008 }, "model": "minecraft:item/valorantmc/bucky" },
+    { "predicate": { "custom_model_data": 1009 }, "model": "minecraft:item/valorantmc/judge" },
+    { "predicate": { "custom_model_data": 1010 }, "model": "minecraft:item/valorantmc/bulldog" },
+    { "predicate": { "custom_model_data": 1011 }, "model": "minecraft:item/valorantmc/guardian" },
+    { "predicate": { "custom_model_data": 1012 }, "model": "minecraft:item/valorantmc/phantom" },
+    { "predicate": { "custom_model_data": 1013 }, "model": "minecraft:item/valorantmc/vandal" },
+    { "predicate": { "custom_model_data": 1014 }, "model": "minecraft:item/valorantmc/marshal" },
+    { "predicate": { "custom_model_data": 1015 }, "model": "minecraft:item/valorantmc/outlaw" },
+    { "predicate": { "custom_model_data": 1016 }, "model": "minecraft:item/valorantmc/operator" },
+    { "predicate": { "custom_model_data": 1017 }, "model": "minecraft:item/valorantmc/ares" },
+    { "predicate": { "custom_model_data": 1018 }, "model": "minecraft:item/valorantmc/odin" },
+    { "predicate": { "custom_model_data": 1019 }, "model": "minecraft:item/valorantmc/knife" }
+  ]
+}

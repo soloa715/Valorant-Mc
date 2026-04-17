@@ -1,0 +1,31 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.model.new": {
+			"loop": true
+		},
+		"static_idle": {
+			"loop": true,
+			"bones": {
+				"righthand": {
+					"rotation": [92.48691, 10.33801, -89.54388],
+					"position": [-14.3, -8, 5.2],
+					"scale": [1, 1.5, 1]
+				},
+				"knife_and_righthand": {
+					"rotation": [-10.88045, -9.96156, -22.42327],
+					"position": [2.6, -4.6, -6.8]
+				},
+				"knife": {
+					"rotation": [-70, 0, 90],
+					"position": [-8.2, 0, 0]
+				},
+				"lefthand": {
+					"rotation": [143.58103, 9.39375, -258.00313],
+					"position": [18.8, -14.4, -2],
+					"scale": [1, 1.5, 1]
+				}
+			}
+		}
+	}
+}

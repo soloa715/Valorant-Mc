@@ -1,0 +1,9 @@
+{
+  "slot": "crystals:attachment/slot/muzzle_crystal_muffler_slot",
+  "model": "crystals:attachment/muzzle_crystal_muffler_geo",
+  "texture": "crystals:attachment/uv/muzzle_crystal_muffler",
+  "sounds": {
+    "install": "crystals:attachment/muzzle_crystal_muffler_install",
+    "uninstall": "crystals:attachment/muzzle_crystal_muffler_uninstall"
+  }
+}

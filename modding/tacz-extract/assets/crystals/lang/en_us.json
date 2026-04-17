@@ -1,0 +1,23 @@
+{
+  "pack.crystals.crystal_gun.name": "Crystal_Industry",
+  "pack.crystals.crystal_gun.desc": "Using crystal as the base to forge divine weapons",
+  "crystals.gun.golden.name": "§6Gilded_Phantom",
+  "crystals.gun.golden.desc": "§6Meticulously crafted luxury gun body, using expensive crystal ammunition, elegant yet powerful.",
+  "crystals.attachment.muzzle_crystal_muffler.name": "§6Resonant Crystal Gold-Plated Silencer",
+  "crystals.attachment.crystal_mag.name": "§6Resonance Blaze Crystal Explosive Magazine",
+  "crystals.ammo.crystal_acp.name": "§aEtched Source Crystal Pistol Ammo",
+  "crystals:crystal_acp.desc": "§bExpensive ammunition, but absolutely worth it",
+  "crystals.block.crystal_machine.name": "§6Source Crystal Etching Machine",
+  "crystals.block.crystal_machine.desc": "§6The latest Crystal Processing Machine from Kingdom Company is easy to operate, highly precise, and extremely efficient.",
+  "crystals.ammo.unstable_crystal.name": "§cUnstable_Crystal",
+  "crystals.ammo.crystal.name": "§aCrystal",
+  "crystals.type.mg.name": "Crystal_Machine_gun",
+  "crystals.type.pistol.name": "Crystal_Pistol",
+  "crystals.type.rifle.name": "Crystal_Rifle",
+  "crystals.type.shotgun.name": "Crystal_Shotgun",
+  "crystals.type.smg.name": "Crystal_Submachine_gun",
+  "crystals.type.sniper.name": "Crystal_Sniper",
+  "crystals.type.crystal.name": "Crystal_products",
+  "crystals.type.mag.name": "Crystal_Special_magazine",
+  "crystals.type.muzzle.name": "Crystal_Muzzle"
+}

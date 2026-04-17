@@ -32,7 +32,7 @@ public class Brimstone extends Agent {
         if (!abilityC.canUse()) { player.sendMessage(ValorantMC.colorize("&cNo Incendiary charges!")); return; }
         abilityC.consume();
 
-        Location target = player.getTargetBlock(null, 20).getLocation().add(0.5, 0.5, 0.5);
+        Location target = safeTarget(player, 20).add(0.5, 0.5, 0.5);
         player.getWorld().playSound(target, Sound.ITEM_FIRECHARGE_USE, 1f, 0.8f);
 
         new BukkitRunnable() {
@@ -74,7 +74,7 @@ public class Brimstone extends Agent {
                     if (!game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                     if (p.getLocation().distance(loc) <= 5) {
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.FAST_DIGGING, 40, 1, false, false));
+                                org.bukkit.potion.PotionEffectType.HASTE, 40, 1, false, false));
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.SPEED, 40, 0, false, false));
                     }
@@ -90,7 +90,7 @@ public class Brimstone extends Agent {
         if (!abilityE.canUse()) { player.sendMessage(ValorantMC.colorize("&cNo Sky Smoke charges!")); return; }
         abilityE.consume();
 
-        Location target = player.getTargetBlock(null, 30).getLocation().add(0.5, 1, 0.5);
+        Location target = safeTarget(player, 30).add(0.5, 1, 0.5);
         player.getWorld().playSound(target, Sound.ITEM_FIRECHARGE_USE, 0.5f, 0.5f);
 
         // Drop from sky
@@ -98,7 +98,7 @@ public class Brimstone extends Agent {
         new BukkitRunnable() {
             @Override public void run() {
                 current[0] = current[0].clone().add(0, -1, 0);
-                current[0].getWorld().spawnParticle(Particle.SMOKE_LARGE, current[0], 5, 0.2, 0.2, 0.2, 0.01);
+                current[0].getWorld().spawnParticle(Particle.LARGE_SMOKE, current[0], 5, 0.2, 0.2, 0.2, 0.01);
                 if (current[0].getBlockY() <= target.getBlockY()) {
                     // Start smoke cloud
                     startSmokeCloud(target, player, game);
@@ -114,7 +114,7 @@ public class Brimstone extends Agent {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 240) { cancel(); return; }
-                center.getWorld().spawnParticle(Particle.SMOKE_LARGE, center, 15, 1.5, 1.5, 1.5, 0.01);
+                center.getWorld().spawnParticle(Particle.LARGE_SMOKE, center, 15, 1.5, 1.5, 1.5, 0.01);
                 ticks += 3;
             }
         }.runTaskTimer(ValorantMC.getInstance(), 0L, 3L);
@@ -126,7 +126,7 @@ public class Brimstone extends Agent {
         if (!abilityX.isUltReady()) { player.sendMessage(ValorantMC.colorize("&cOrbital Strike not ready!")); return; }
         abilityX.activateUlt();
 
-        Location target = player.getTargetBlock(null, 50).getLocation().add(0.5, 0, 0.5);
+        Location target = safeTarget(player, 50).add(0.5, 0, 0.5);
         game.broadcast(ValorantMC.colorize("&c[Brimstone] &lORBITAL STRIKE INCOMING!"));
         player.getWorld().playSound(target, Sound.ENTITY_WITHER_DEATH, 1f, 0.5f);
 

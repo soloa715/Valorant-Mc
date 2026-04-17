@@ -1,0 +1,12 @@
+{
+  "key.categories.valorantmc":    "ValorantMC",
+  "key.valorantmc.shop":          "Open Buy Menu",
+  "key.valorantmc.reload":        "Reload",
+  "key.valorantmc.agent":         "Pick Agent",
+  "key.valorantmc.dropspike":     "Drop Spike",
+  "key.valorantmc.walk":          "Toggle Walk",
+  "key.valorantmc.ability_c":     "Use C Ability",
+  "key.valorantmc.ability_q":     "Use Q Ability",
+  "key.valorantmc.ability_e":     "Use E Ability",
+  "key.valorantmc.ult":           "Use Ultimate"
+}

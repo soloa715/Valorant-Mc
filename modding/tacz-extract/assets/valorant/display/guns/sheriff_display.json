@@ -1,0 +1,121 @@
+{
+  "state_machine": "valorant:aim_rpm_state_machine",
+  "state_machine_param": {
+    "rpm_rate": 0.8
+  },
+  "model": "valorant:gun/sheriff_geo",
+  "texture": "valorant:gun/uv/sheriff",
+  "lod": {
+    "model": "valorant:gun/lod/sheriff",
+    "texture": "valorant:gun/lod/sheriff"
+  },
+  "hud": "valorant:gun/hud/sheriff_hud",
+  "slot": "valorant:gun/slot/sheriff_slot",
+  "animation": "valorant:sheriff",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "player_animator_3rd": "tacz:rifle_default.player_animation",
+  "show_crosshair": true,
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "ground": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "fixed": [
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 0.75
+  },
+  "iron_zoom": 1,
+  "ammo": {
+    "tracer_color": "#FF8888"
+  },
+  "sounds": {
+    "shoot": "valorant:sheriff/sheriff_shoot",
+    "shoot_3p": "valorant:sheriff/sheriff_shoot_3p",
+    "reload_empty": "valorant:sheriff/sheriff_reload",
+    "reload_tactical": "valorant:sheriff/sheriff_reload",
+    "draw": "valorant:sheriff/sheriff_draw",
+    "put_away": "valorant:sheriff/sheriff_put_away",
+    "inspect": "valorant:sheriff/sheriff_inspect",
+    "kill": "valorant:kill"
+  },
+  "offhand_show": {
+    "pos": [
+      1,
+      20,
+      3.5
+    ],
+    "rotate": [
+      0,
+      0,
+      60
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [
+        -1,
+        20,
+        3
+      ],
+      "rotate": [
+        -180,
+        0,
+        120
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  },
+  "text_show": {
+    "ammo_count_text_show_pos": {
+      "scale": 1,
+      "align": "center",
+      "shadow": false,
+      "color": "#FFFFFF",
+      "light": 15,
+      "text": "text_show.tacz.ak47.ammo_count"
+    }
+  },
+  "controllable": {
+    "semi": {
+      "low_frequency": 0.25,
+      "high_frequency": 0.5,
+      "time": 100
+    },
+    "auto": {
+      "low_frequency": 0.15,
+      "high_frequency": 0.25,
+      "time": 80
+    },
+    "burst": {
+      "low_frequency": 0.25,
+      "high_frequency": 0.5,
+      "time": 100
+    }
+  },
+  "ammo_count_style": "normal",
+  "damage_style": "per_projectile"
+}

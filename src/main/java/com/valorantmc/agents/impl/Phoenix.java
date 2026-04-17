@@ -52,7 +52,7 @@ public class Phoenix extends Agent {
                     if (p.getLocation().distance(wallLoc) > 1.2) continue;
                     if (game.getTeam(p) == null) continue;
                     if (p.equals(player)) {
-                        p.setHealth(Math.min(20, p.getHealth() + 0.5));
+                        game.heal(p, 2);
                     } else if (!game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) {
                         game.applyDamage(player, p, 15, false, false);
                     }
@@ -89,7 +89,7 @@ public class Phoenix extends Agent {
         if (!abilityE.canUse()) { player.sendMessage(ValorantMC.colorize("&cHot Hands used! Recharges next round.")); return; }
         abilityE.consume();
 
-        Location target = player.getTargetBlock(null, 12).getLocation().add(0.5, 1, 0.5);
+        Location target = safeTarget(player, 12).add(0.5, 1, 0.5);
         player.getWorld().playSound(target, Sound.ENTITY_BLAZE_SHOOT, 1f, 0.8f);
 
         new BukkitRunnable() {
@@ -100,7 +100,7 @@ public class Phoenix extends Agent {
                 for (Player p : target.getWorld().getPlayers()) {
                     if (p.getLocation().distance(target) > 2) continue;
                     if (p.equals(player)) {
-                        p.setHealth(Math.min(20, p.getHealth() + 0.3));
+                        game.heal(p, 2);
                     } else if (game.getTeam(p) != null &&
                             !game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) {
                         game.applyDamage(player, p, 8, false, false);

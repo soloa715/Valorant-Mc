@@ -1,0 +1,30 @@
+{
+  "pack.valorant.valorant_gun.name": "§4无畏契约_源能争夺",
+  "pack.valorant.valorant_gun.desc": "源能之战，一触即发",
+  
+  "valorant.gun.vandal.name": "§7狂徒",
+  "valorant.gun.phantom.name": "§7幻影",
+  "valorant.gun.sheriff.name": "§7正义",
+  "valorant.gun.odin.name": "§7奥丁",
+  "valorant.gun.ghost.name": "§7鬼魅",
+
+  "valorant.gun.vandal.desc": "这把步枪短小精悍且精准，短点射连发的威力无所披靡",
+  "valorant.gun.phantom.desc": "平衡的完美代言人，中近距离扫射的不二之选",
+  "valorant.gun.sheriff.desc": "一枪穿透颅骨，带给你前所未有的爆头快感",
+  "valorant.gun.odin.desc": "凡人者皆下跪，且聆听神王怒吼",
+  "valorant.gun.ghost.desc": "流线型的枪身带来舒适手感，消音设计使暗杀于无形",
+
+  "valorant.block.table.name": "§6王国远程源晶交易平台",
+  "valorant.block.table.desc": "王国公司最新研发的远程交易传送装置",
+
+  "valorant.ammo.wg50.name": "§650王国币",
+  "valorant.ammo.wg100.name": "§6100王国币",
+
+  "valorant.type.mg.name": "机枪",
+  "valorant.type.pistol.name": "手枪",
+  "valorant.type.rifle.name": "步枪",
+  "valorant.type.shotgun.name": "霰弹枪",
+  "valorant.type.smg.name": "冲锋枪",
+  "valorant.type.sniper.name": "狙击枪",
+  "valorant.type.currency.name": "货币"
+}

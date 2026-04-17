@@ -1,0 +1,36 @@
+name: ascent
+display-name: "Ascent"
+world: world
+auto-generate: true
+
+# Attacker spawns — north edge of arena (z = -27), evenly spaced
+attack-spawns:
+  - "0,65,-27,180,0"
+  - "-6,65,-27,180,0"
+  - "6,65,-27,180,0"
+  - "-12,65,-27,175,0"
+  - "12,65,-27,185,0"
+
+# Defender spawns — south edge of arena (z = +27), facing north
+defend-spawns:
+  - "0,65,27,0,0"
+  - "-6,65,27,0,0"
+  - "6,65,27,0,0"
+  - "-12,65,27,5,0"
+  - "12,65,27,-5,0"
+
+# Site A — west platform at x=-15
+site-a:
+  - "-15,65,0"
+  - "-15,65,1"
+  - "-15,65,-1"
+  - "-16,65,0"
+  - "-14,65,0"
+
+# Site B — east platform at x=+15
+site-b:
+  - "15,65,0"
+  - "15,65,1"
+  - "15,65,-1"
+  - "16,65,0"
+  - "14,65,0"

@@ -40,10 +40,10 @@ public class Killjoy extends Agent {
         if (!abilityC.canUse()) { player.sendMessage(ValorantMC.colorize("&eNo Nanoswarm charges!")); return; }
         abilityC.consume();
 
-        Location loc = player.getTargetBlock(null, 6).getLocation().add(0.5, 1, 0.5);
+        Location loc = safeTarget(player, 6).add(0.5, 1, 0.5);
         nanoswarmLocations.add(loc);
 
-        player.getWorld().spawnParticle(Particle.CRIT_MAGIC, loc, 5, 0.1, 0.1, 0.1, 0);
+        player.getWorld().spawnParticle(Particle.ENCHANTED_HIT, loc, 5, 0.1, 0.1, 0.1, 0);
         player.sendMessage(ValorantMC.colorize("&e[Killjoy] &fNanoswarm placed! Right-click the item again to detonate."));
 
         // Auto-detonate after 20s if not triggered
@@ -57,7 +57,7 @@ public class Killjoy extends Agent {
         if (!abilityQ.canUse()) { player.sendMessage(ValorantMC.colorize("&eNo Alarmbot charges!")); return; }
         abilityQ.consume();
 
-        Location loc = player.getTargetBlock(null, 5).getLocation().add(0.5, 1, 0.5);
+        Location loc = safeTarget(player, 5).add(0.5, 1, 0.5);
         player.getWorld().playSound(loc, Sound.BLOCK_DISPENSER_DISPENSE, 1f, 1.5f);
 
         new BukkitRunnable() {
@@ -77,7 +77,7 @@ public class Killjoy extends Agent {
                         ticks += 200; // reduce scan after trigger
                     }
                 }
-                loc.getWorld().spawnParticle(Particle.CRIT_MAGIC, loc, 1, 0.1, 0.1, 0.1, 0);
+                loc.getWorld().spawnParticle(Particle.ENCHANTED_HIT, loc, 1, 0.1, 0.1, 0.1, 0);
                 ticks += 5;
             }
         }.runTaskTimer(ValorantMC.getInstance(), 0L, 5L);
@@ -90,7 +90,7 @@ public class Killjoy extends Agent {
         if (!abilityE.canUse()) { player.sendMessage(ValorantMC.colorize("&eTurret already deployed!")); return; }
         abilityE.consume();
 
-        Location loc = player.getTargetBlock(null, 5).getLocation().add(0.5, 1, 0.5);
+        Location loc = safeTarget(player, 5).add(0.5, 1, 0.5);
         ArmorStand turret = (ArmorStand) player.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
         turret.setCustomName(ValorantMC.colorize("&e[KJ Turret]"));
         turret.setCustomNameVisible(true);
@@ -147,7 +147,7 @@ public class Killjoy extends Agent {
                         if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                         if (p.getLocation().distance(center) <= 13) {
                             p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                    org.bukkit.potion.PotionEffectType.SLOW, 100, 255, false, false));
+                                    org.bukkit.potion.PotionEffectType.SLOWNESS, 100, 255, false, false));
                             p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                     org.bukkit.potion.PotionEffectType.WEAKNESS, 100, 255, false, false));
                             p.sendMessage(ValorantMC.colorize("&e[Lockdown] &cYou are detained!"));

@@ -8,6 +8,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.Objects;
 
 public final class ValorantMC extends JavaPlugin {
 
@@ -22,6 +23,7 @@ public final class ValorantMC extends JavaPlugin {
     private AbilityManager abilityManager;
     private MapManager mapManager;
     private StatsManager statsManager;
+    private HudManager hudManager;
     private com.valorantmc.listeners.AbilityListener abilityListener;
 
     private FileConfiguration messages;
@@ -47,6 +49,8 @@ public final class ValorantMC extends JavaPlugin {
         mapManager     = new MapManager(this);
         statsManager   = new StatsManager(this);
         gameManager    = new GameManager(this);
+        hudManager     = new HudManager(this);
+        hudManager.start();
 
         // Register commands
         ValorantCommand cmd = new ValorantCommand(this);
@@ -61,6 +65,7 @@ public final class ValorantMC extends JavaPlugin {
         getCommand("vuse").setExecutor(cmd);
         getCommand("vskin").setExecutor(cmd);
         getCommand("vplay").setExecutor(cmd);
+        Objects.requireNonNull(getCommand("vmapsetup")).setExecutor(new com.valorantmc.commands.MapSetupCommand(this));
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new WeaponListener(this), this);
@@ -88,8 +93,11 @@ public final class ValorantMC extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (gameManager != null) gameManager.shutdown();
-        if (statsManager != null) statsManager.saveAll();
+        if (economyManager != null) economyManager.saveAll();
+        if (skinManager    != null) skinManager.saveAll();
+        if (statsManager   != null) statsManager.saveAll();
+        if (hudManager     != null) hudManager.stop();
+        if (gameManager    != null) gameManager.shutdown();
         getLogger().info("ValorantMC disabled. Good game!");
     }
 
@@ -105,6 +113,7 @@ public final class ValorantMC extends JavaPlugin {
     public AbilityManager getAbilityManager() { return abilityManager; }
     public MapManager     getMapManager()     { return mapManager;     }
     public StatsManager   getStatsManager()   { return statsManager;   }
+    public HudManager     getHudManager()     { return hudManager;     }
     public com.valorantmc.listeners.AbilityListener getAbilityListener() { return abilityListener; }
 
     public FileConfiguration getMessages() { return messages; }

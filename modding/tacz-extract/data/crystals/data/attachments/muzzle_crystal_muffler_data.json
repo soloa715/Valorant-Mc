@@ -1,0 +1,17 @@
+{
+  "damage": {
+    "addend": 20
+  },
+  "ammo_speed": {
+    "addend": 100
+  },
+  "armor_ignore": {
+    "addend": 0.2
+  },
+  "head_shot": {
+    "addend": 2.5
+  },
+  "silence": {
+    "distance_addend": -15
+  }
+}

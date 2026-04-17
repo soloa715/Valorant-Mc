@@ -1,0 +1,9 @@
+{
+  "name": "crystals.gun.golden.name",
+  "tooltip": "crystals.gun.golden.desc",
+  "data": "crystals:golden_data",
+  "display": "crystals:golden_display",
+  "type": "pistol",
+  "item_type": "modern_kinetic",
+  "sort": 1
+}

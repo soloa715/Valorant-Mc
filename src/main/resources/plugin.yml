@@ -1,7 +1,7 @@
 name: ValorantMC
 version: ${project.version}
 main: com.valorantmc.ValorantMC
-api-version: 1.20
+api-version: 1.21
 description: Full Valorant experience inside Minecraft
 authors: [ValorantMC Team]
 website: https://github.com/valorantmc
@@ -44,6 +44,11 @@ commands:
     description: Open the lobby GUI
     aliases: [play, lobby]
     usage: /vplay
+  vmapsetup:
+    description: In-game map setup wizard for server hosters
+    aliases: [mapsetup, vmap]
+    usage: /vmapsetup <create|addspawn|addsite|setworld|save|list|validate|tp|wand>
+    permission: valorantmc.admin
 
 permissions:
   valorantmc.admin:

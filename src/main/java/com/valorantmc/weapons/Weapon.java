@@ -19,10 +19,11 @@ import java.util.UUID;
  */
 public class Weapon {
 
-    public static final NamespacedKey KEY_WEAPON_TYPE  = new NamespacedKey(ValorantMC.getInstance(), "weapon_type");
-    public static final NamespacedKey KEY_WEAPON_AMMO  = new NamespacedKey(ValorantMC.getInstance(), "weapon_ammo");
-    public static final NamespacedKey KEY_WEAPON_SKIN  = new NamespacedKey(ValorantMC.getInstance(), "weapon_skin");
-    public static final NamespacedKey KEY_WEAPON_OWNER = new NamespacedKey(ValorantMC.getInstance(), "weapon_owner");
+    public static final NamespacedKey KEY_WEAPON_TYPE    = new NamespacedKey(ValorantMC.getInstance(), "weapon_type");
+    public static final NamespacedKey KEY_WEAPON_AMMO    = new NamespacedKey(ValorantMC.getInstance(), "weapon_ammo");
+    public static final NamespacedKey KEY_WEAPON_RESERVE = new NamespacedKey(ValorantMC.getInstance(), "weapon_reserve");
+    public static final NamespacedKey KEY_WEAPON_SKIN    = new NamespacedKey(ValorantMC.getInstance(), "weapon_skin");
+    public static final NamespacedKey KEY_WEAPON_OWNER   = new NamespacedKey(ValorantMC.getInstance(), "weapon_owner");
 
     private final WeaponType type;
     private int   currentAmmo;
@@ -85,9 +86,10 @@ public class Weapon {
         meta.setUnbreakable(true);
 
         // NBT data
-        meta.getPersistentDataContainer().set(KEY_WEAPON_TYPE,  PersistentDataType.STRING, type.name());
-        meta.getPersistentDataContainer().set(KEY_WEAPON_AMMO,  PersistentDataType.INTEGER, currentAmmo);
-        meta.getPersistentDataContainer().set(KEY_WEAPON_SKIN,  PersistentDataType.STRING, appliedSkin);
+        meta.getPersistentDataContainer().set(KEY_WEAPON_TYPE,    PersistentDataType.STRING,  type.name());
+        meta.getPersistentDataContainer().set(KEY_WEAPON_AMMO,    PersistentDataType.INTEGER, currentAmmo);
+        meta.getPersistentDataContainer().set(KEY_WEAPON_RESERVE, PersistentDataType.INTEGER, reserveAmmo);
+        meta.getPersistentDataContainer().set(KEY_WEAPON_SKIN,    PersistentDataType.STRING,  appliedSkin);
         if (ownerUUID != null)
             meta.getPersistentDataContainer().set(KEY_WEAPON_OWNER, PersistentDataType.STRING, ownerUUID.toString());
 
@@ -142,10 +144,17 @@ public class Weapon {
     }
 
     public static int getStoredAmmo(ItemStack item) {
-        if (item == null || !item.hasItemMeta()) return 0;
+        if (item == null || !item.hasItemMeta()) return -1;
         Integer val = item.getItemMeta().getPersistentDataContainer()
                 .get(KEY_WEAPON_AMMO, PersistentDataType.INTEGER);
-        return val == null ? 0 : val;
+        return val == null ? -1 : val;
+    }
+
+    public static int getStoredReserve(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return -1;
+        Integer val = item.getItemMeta().getPersistentDataContainer()
+                .get(KEY_WEAPON_RESERVE, PersistentDataType.INTEGER);
+        return val == null ? -1 : val;
     }
 
     /** Update ammo displayed in item lore/NBT without recreating the full item */

@@ -1,0 +1,34 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "result": {
+    "item": "tacz:workbench_b",
+    "nbt": {
+      "BlockId": "crystals:crystal_machine"
+    }
+  },
+  "pattern": [
+    "665",
+    "121",
+    "343"
+  ],
+  "key": {
+    "1": {
+      "tag": "forge:glass"
+    },
+    "2": {
+      "item": "minecraft:end_crystal"
+    },
+    "3": {
+      "tag": "forge:storage_blocks/netherite"
+    },
+    "4": {
+      "tag": "forge:storage_blocks/redstone"
+    },
+    "5": {
+      "tag": "forge:storage_blocks/amethyst"
+    },
+    "6": {
+      "tag": "forge:storage_blocks/iron"
+    }
+  }
+}

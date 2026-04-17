@@ -1,0 +1,23 @@
+{
+  "pack.crystals.crystal_gun.name": "源晶工业",
+  "pack.crystals.crystal_gun.desc": "以源晶为基，造神明利器",
+  "crystals.gun.golden.name": "§6鎏金魅影",
+  "crystals.gun.golden.desc": "§6精细制造奢华枪身，使用昂贵的源晶弹药，优雅而不失强大火力",
+  "crystals.attachment.muzzle_crystal_muffler.name": "§6共振晶体鎏金消音器",
+  "crystals.attachment.crystal_mag.name": "§6共鸣烈晶爆燃弹匣",
+  "crystals.ammo.crystal_acp.name": "§a刻蚀源晶手枪弹",
+  "crystals:crystal_acp.desc": "§b昂贵的弹药，但绝对值得",
+  "crystals.block.crystal_machine.name": "§6源晶刻蚀加工机",
+  "crystals.block.crystal_machine.desc": "§6王国公司最新版源晶加工机，操作简便，加工精准，效率一流",
+  "crystals.ammo.unstable_crystal.name": "§c不稳定烈性源晶",
+  "crystals.ammo.crystal.name": "§a已封存提纯源晶",
+  "crystals.type.mg.name": "源晶_机枪",
+  "crystals.type.pistol.name": "源晶_手枪",
+  "crystals.type.rifle.name": "源晶_步枪",
+  "crystals.type.shotgun.name": "源晶_霰弹枪",
+  "crystals.type.smg.name": "源晶_冲锋枪",
+  "crystals.type.sniper.name": "源晶_狙击枪",
+  "crystals.type.crystal.name": "源晶产品",
+  "crystals.type.mag.name": "源晶_特种弹匣",
+  "crystals.type.muzzle.name": "源晶_枪口配件"
+}

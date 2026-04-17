@@ -18,11 +18,12 @@ public abstract class Agent {
 
     public static class Ability {
         public final String  name;
-        public final int     cost;          // 0 = free/signature
-        public final int     charges;       // how many uses per round
+        public final int     cost;           // 0 = free/signature
+        public final int     charges;        // how many uses per round
         public final int     ultimatePoints; // 0 unless this is the ult
         private       int    currentCharges;
         private       int    ultimateProgress;
+        private       long   cooldownEnd = 0; // epoch ms when cooldown expires
 
         public Ability(String name, int cost, int charges, int ultimatePoints) {
             this.name            = name;
@@ -32,14 +33,20 @@ public abstract class Agent {
             this.currentCharges  = charges;
         }
 
-        public boolean canUse()       { return currentCharges > 0; }
+        public boolean canUse()       { return currentCharges > 0 && !isOnCooldown(); }
         public void    consume()      { currentCharges = Math.max(0, currentCharges - 1); }
-        public void    resetCharges() { currentCharges = charges; }
+        public void    resetCharges() { currentCharges = charges; cooldownEnd = 0; }
         public int     getCurrentCharges()    { return currentCharges; }
         public int     getUltimateProgress()  { return ultimateProgress; }
         public void    addUltPoint()          { ultimateProgress++; }
         public boolean isUltReady()           { return ultimatePoints > 0 && ultimateProgress >= ultimatePoints; }
         public void    activateUlt()          { if (isUltReady()) { ultimateProgress = 0; currentCharges = 1; } }
+
+        /** Start a cooldown (milliseconds). canUse() returns false while active. */
+        public void    setCooldown(long ms)   { cooldownEnd = System.currentTimeMillis() + ms; }
+        public boolean isOnCooldown()         { return System.currentTimeMillis() < cooldownEnd; }
+        /** Remaining cooldown in seconds (0 if not on cooldown). */
+        public double  getCooldownSeconds()   { return Math.max(0, (cooldownEnd - System.currentTimeMillis()) / 1000.0); }
     }
 
     protected final AgentRole role;
@@ -85,12 +92,17 @@ public abstract class Agent {
 
     // ── Hotbar setup ─────────────────────────────────────────────────────────
 
-    /** Give ability items to the player's hotbar */
+    /**
+     * Give ability items to the player's hotbar.
+     * Slot layout:
+     *   0 = primary weapon   1 = sidearm   2 = knife   3 = spike
+     *   4 = C   5 = Q   6 = E   7 = X (ult)
+     */
     public void giveAbilityItems(Player player) {
-        player.getInventory().setItem(0, buildAbilityItem(abilityC, 'C'));
-        player.getInventory().setItem(1, buildAbilityItem(abilityQ, 'Q'));
-        player.getInventory().setItem(2, buildAbilityItem(abilityE, 'E'));
-        player.getInventory().setItem(3, buildAbilityItem(abilityX, 'X'));
+        player.getInventory().setItem(4, buildAbilityItem(abilityC, 'C'));
+        player.getInventory().setItem(5, buildAbilityItem(abilityQ, 'Q'));
+        player.getInventory().setItem(6, buildAbilityItem(abilityE, 'E'));
+        player.getInventory().setItem(7, buildAbilityItem(abilityX, 'X'));
     }
 
     private org.bukkit.inventory.ItemStack buildAbilityItem(Ability a, char key) {
@@ -123,6 +135,22 @@ public abstract class Agent {
 
         item.setItemMeta(meta);
         return item;
+    }
+
+    // ── Utility helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Null-safe replacement for player.getTargetBlock(null, range).getLocation().
+     * If the player is looking at sky/void and no block is found within range,
+     * returns a point directly in front of the player at half the range distance
+     * instead of crashing with a NullPointerException.
+     */
+    protected static org.bukkit.Location safeTarget(org.bukkit.entity.Player player, int range) {
+        org.bukkit.block.Block b = player.getTargetBlock(null, range);
+        if (b != null) return b.getLocation();
+        // Fallback: project forward at half range, clamped to non-solid ground
+        return player.getEyeLocation().add(
+                player.getLocation().getDirection().multiply(range * 0.5));
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────

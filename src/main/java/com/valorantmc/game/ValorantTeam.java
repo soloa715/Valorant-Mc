@@ -34,6 +34,7 @@ public class ValorantTeam {
     public boolean contains(UUID uuid) { return members.contains(uuid); }
 
     public void markDead(Player p)  { deadMembers.add(p.getUniqueId()); }
+    public void revive(Player p)    { deadMembers.remove(p.getUniqueId()); }
     public void reviveAll()         { deadMembers.clear(); }
 
     public boolean isDead(Player p)  { return deadMembers.contains(p.getUniqueId()); }

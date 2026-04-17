@@ -1,0 +1,50 @@
+{
+  // 配方过滤器，具体内容位于 data/<命名空间>/recipe_filters 下
+  // 如果没有指定，将使用默认过滤器 tacz:default
+  "filter": "valorant:valorant_all",
+    // gui内包含的tab
+  // 如果没有填写此字段或者tabs为空，将使用内置的默认tab列表
+  // 你可以使用自定义的tab id来实现另外一种配方限制
+  "tabs": [
+    {
+      "id": "valorant:currency",
+      "name": "valorant.type.currency.name",
+      "icon": {
+        "item": "tacz:ammo",
+        "nbt": {
+          "AmmoId": "valorant:wg100"
+        }
+      }
+    },
+    {
+      "id": "tacz:pistol",
+      "name": "valorant.type.pistol.name",
+      "icon": {
+        "item": "tacz:modern_kinetic_gun",
+        "nbt": {
+          "GunId": "valorant:sheriff"
+        }
+      }
+    },
+    {
+      "id": "tacz:rifle",
+      "name": "valorant.type.rifle.name",
+      "icon": {
+        "item": "tacz:modern_kinetic_gun",
+        "nbt": {
+          "GunId": "valorant:vandal"
+        }
+      }
+    },
+    {
+      "id": "tacz:mg",
+      "name": "valorant.type.mg.name",
+      "icon": {
+        "item": "tacz:modern_kinetic_gun",
+        "nbt": {
+          "GunId": "valorant:odin"
+        }
+      }
+    }
+  ]
+}

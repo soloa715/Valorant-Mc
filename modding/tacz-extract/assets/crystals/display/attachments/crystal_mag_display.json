@@ -1,0 +1,9 @@
+{
+  "slot": "crystals:attachment/slot/crystal_mag_slot",
+  "model": "crystals:attachment/crystal_mag_geo",
+  "texture": "crystals:attachment/uv/crystal_mag",
+  "sounds": {
+    "install": "crystals:attachment/crystal_mag_install",
+    "uninstall": "crystals:attachment/crystal_mag_uninstall"
+  }
+}

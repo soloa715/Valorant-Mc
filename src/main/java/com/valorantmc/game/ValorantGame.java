@@ -9,6 +9,8 @@ import com.valorantmc.weapons.WeaponType;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.title.Title;
+import java.time.Duration;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -41,6 +43,9 @@ public class ValorantGame {
     private final Map<UUID, Weapon> playerWeapons = new HashMap<>();
     private final Map<UUID, Integer> playerHealth = new HashMap<>();  // 0-150 (base 100 + shield)
     private final Map<UUID, Integer> playerShield = new HashMap<>();  // 0-50 (light) / 0-100 (heavy)
+
+    // ── Damage tracking for assists ───────────────────────────────────────────
+    private final Map<UUID, Set<UUID>> damageContributors = new HashMap<>(); // victim → set of damagers
 
     // ── Map ───────────────────────────────────────────────────────────────────
     private String mapName;
@@ -119,6 +124,11 @@ public class ValorantGame {
 
     /** Start agent-select phase then begin first round */
     public void start(String mapName) {
+        // Cancel any leftover timers from a previous run to prevent double-tick races
+        if (timerTask       != null) { timerTask.cancel();       timerTask       = null; }
+        if (agentSelectTask != null) { agentSelectTask.cancel(); agentSelectTask = null; }
+        if (buyPhaseTask    != null) { buyPhaseTask.cancel();    buyPhaseTask    = null; }
+
         this.mapName = mapName;
         loadMap(mapName);
 
@@ -180,6 +190,7 @@ public class ValorantGame {
     private void startBuyPhase() {
         currentRound++;
         state = GameState.BUY_PHASE;
+        if (currentRound == 1) plugin.getStatsManager().startMatch(getAllPlayers());
 
         // Give each player starting credits / round bonus
         giveRoundStartCredits();
@@ -192,6 +203,10 @@ public class ValorantGame {
 
         int buyDuration = plugin.getConfig().getInt("game.buy-phase-duration", 30);
         broadcast(ValorantMC.colorize("&e&lROUND " + currentRound + " — Buy Phase! &r&7(" + buyDuration + "s)"));
+        // Title announcement
+        broadcastTitle(
+                Component.text("ROUND " + currentRound).color(NamedTextColor.YELLOW),
+                Component.text("BUY PHASE — " + buyDuration + "s").color(NamedTextColor.GRAY));
         broadcast(ValorantMC.colorize("&7Use &b/vshop&7 to buy weapons and abilities."));
 
         updateScoreboard();
@@ -216,6 +231,9 @@ public class ValorantGame {
         state = GameState.ROUND_ACTIVE;
         int roundDuration = plugin.getConfig().getInt("game.round-duration", 100);
         broadcast(ValorantMC.colorize("&c&lFIGHT!"));
+        broadcastTitle(
+                Component.text("FIGHT!").color(NamedTextColor.RED),
+                Component.text("Round " + currentRound + " of " + maxRounds).color(NamedTextColor.GRAY));
 
         // Give spike to random attacker
         List<Player> atks = attackers.getOnlinePlayers();
@@ -264,6 +282,14 @@ public class ValorantGame {
 
         broadcast(ValorantMC.colorize(winner.getChatColor() + "&l" + winner.getDisplayName()
                 + " &r&6win the round! &7(" + reason + ")"));
+        // Round-end title
+        boolean atkWon = winningSide == ValorantTeam.Side.ATTACKERS;
+        Component roundTitle = atkWon
+                ? Component.text("ATTACKERS WIN").color(NamedTextColor.RED)
+                : Component.text("DEFENDERS WIN").color(NamedTextColor.AQUA);
+        Component roundSub = Component.text(attackers.getRoundWins() + " — " + defenders.getRoundWins())
+                .color(NamedTextColor.WHITE);
+        broadcastTitle(roundTitle, roundSub);
 
         // Economy awards
         int winBonus  = plugin.getConfig().getInt("game.round-win-bonus",  3000);
@@ -306,6 +332,35 @@ public class ValorantGame {
         broadcast(ValorantMC.colorize(winner.getChatColor() + "&l" + winner.getDisplayName() + " WIN!"));
         broadcast(ValorantMC.colorize("&7Score: &c" + attackers.getRoundWins() + " &7- &b" + defenders.getRoundWins()));
         broadcast(ValorantMC.colorize("&6&l============================="));
+        // VICTORY / DEFEAT title per player
+        getAllPlayers().forEach(p -> {
+            boolean won = getTeam(p) == winner;
+            Component endTitle = won
+                    ? Component.text("VICTORY").color(NamedTextColor.GOLD)
+                    : Component.text("DEFEAT").color(NamedTextColor.RED);
+            Component endSub = Component.text(
+                    attackers.getRoundWins() + " — " + defenders.getRoundWins())
+                    .color(NamedTextColor.WHITE);
+            Title.Times t = Title.Times.times(
+                    Duration.ofMillis(500), Duration.ofMillis(4000), Duration.ofMillis(800));
+            p.showTitle(Title.title(endTitle, endSub, t));
+        });
+
+        // Match summary
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            broadcast(ValorantMC.colorize("&6&l╔═══════ MATCH SUMMARY ═══════╗"));
+            broadcast(ValorantMC.colorize(String.format("&6&l%-16s %4s %4s %4s %5s", "PLAYER", "K", "D", "A", "HS%")));
+            broadcast(ValorantMC.colorize("&8" + "─".repeat(38)));
+            for (Player p : getAllPlayers()) {
+                com.valorantmc.managers.StatsManager.PlayerStats ms =
+                        plugin.getStatsManager().getMatchStats(p.getUniqueId());
+                String hs = String.format("%.0f%%", ms.getHSPct());
+                String color = getTeam(p) == winner ? "&a" : "&c";
+                broadcast(ValorantMC.colorize(String.format(color + "%-16s &f%4d %4d %4d %5s",
+                        p.getName(), ms.kills, ms.deaths, ms.assists, hs)));
+            }
+            broadcast(ValorantMC.colorize("&6&l╚════════════════════════════╝"));
+        }, 40L);
 
         // Disconnect players after 10 seconds
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
@@ -343,7 +398,9 @@ public class ValorantGame {
      */
     public void applyDamage(Player source, Player target, int rawDamage,
                              boolean isHeadshot, boolean isLegshot) {
-        if (!playerHealth.containsKey(target.getUniqueId())) return;
+        // Ensure the target is tracked — if they somehow missed addPlayer(), init them now
+        playerHealth.putIfAbsent(target.getUniqueId(), 100);
+        playerShield.putIfAbsent(target.getUniqueId(), 0);
 
         double multiplier = isHeadshot ? 2.5 : isLegshot ? 0.85 : 1.0;
         int finalDamage = (int) Math.ceil(rawDamage * multiplier);
@@ -358,6 +415,12 @@ public class ValorantGame {
         }
 
         int hp = playerHealth.getOrDefault(target.getUniqueId(), 100) - finalDamage;
+
+        // Track damage contributors for assists
+        if (source != null && hp > 0) {
+            damageContributors.computeIfAbsent(target.getUniqueId(), k -> new HashSet<>())
+                    .add(source.getUniqueId());
+        }
 
         if (hp <= 0) {
             playerHealth.put(target.getUniqueId(), 0);
@@ -383,8 +446,35 @@ public class ValorantGame {
     }
 
     private void handleDeath(Player killer, Player victim, boolean headshot) {
+        // Phoenix Run It Back — intercept death and respawn at anchor instead
+        NamespacedKey ribKey = new NamespacedKey(plugin, "runitback");
+        if (victim.getPersistentDataContainer().has(ribKey, org.bukkit.persistence.PersistentDataType.BOOLEAN)) {
+            victim.getPersistentDataContainer().remove(ribKey);
+            Agent phoenixAgent = playerAgents.get(victim.getUniqueId());
+            if (phoenixAgent instanceof com.valorantmc.agents.impl.Phoenix phoenix
+                    && phoenix.getRunItBackAnchor() != null) {
+                victim.teleport(phoenix.getRunItBackAnchor());
+                phoenix.clearAnchor();
+                playerHealth.put(victim.getUniqueId(), 50);
+                playerShield.put(victim.getUniqueId(), 0);
+                victim.setHealth(10);
+                victim.sendMessage(ValorantMC.colorize("&6[Phoenix] &fRun It Back! Respawned at anchor."));
+                return; // not a real death — skip everything below
+            }
+        }
+
         victim.setHealth(20);
         victim.setGameMode(GameMode.SPECTATOR);
+        victim.setSpectatorTarget(null); // ensure starts free-floating, not locked to an enemy
+        // If the victim was carrying the spike, drop it where they died so a teammate can grab it.
+        boolean droppedSpike = spike.getCarrierUUID() != null
+                && spike.getCarrierUUID().equals(victim.getUniqueId());
+        if (droppedSpike) {
+            spike.drop(victim.getLocation());
+            victim.getInventory().remove(Material.RED_DYE);
+        }
+        // Cancel any plant/defuse the victim was performing
+        if (plugin.getAbilityListener() != null) plugin.getAbilityListener().cancelFor(victim);
 
         ValorantTeam victimTeam = getTeam(victim);
         if (victimTeam != null) victimTeam.markDead(victim);
@@ -401,14 +491,38 @@ public class ValorantGame {
                     plugin.getConfig().getInt("game.kill-bonus", 200));
             // Stats
             plugin.getStatsManager().recordKill(killer.getUniqueId(), headshot);
+            // Assists — anyone who damaged the victim but didn't get the kill
+            Set<UUID> contributors = damageContributors.remove(victim.getUniqueId());
+            if (contributors != null) {
+                final UUID killerUuid = killer.getUniqueId();
+                contributors.stream()
+                        .filter(id -> !id.equals(killerUuid))
+                        .forEach(id -> plugin.getStatsManager().recordAssist(id));
+            }
+            // Agent kill callbacks — ult points, Reyna soul orbs, Jett dash recharge, etc.
+            Agent killerAgent = playerAgents.get(killer.getUniqueId());
+            if (killerAgent != null) killerAgent.onKill(killer, victim, this);
         } else {
             killMsg = ValorantMC.colorize("&8" + victim.getName() + " died.");
         }
         broadcast(killMsg);
         plugin.getStatsManager().recordDeath(victim.getUniqueId());
+        // Kill feed — show kill notification as action bar to all players for 3s
+        String killerColor = (killer != null && getTeam(killer) != null)
+                ? (getTeam(killer).getSide() == ValorantTeam.Side.ATTACKERS ? "§c" : "§b") : "§7";
+        String victimColor = (getTeam(victim) != null)
+                ? (getTeam(victim).getSide() == ValorantTeam.Side.ATTACKERS ? "§c" : "§b") : "§7";
+        String feedMsg = killerColor + (killer != null ? killer.getName() : "")
+                + " §f✦ " + victimColor + victim.getName()
+                + (headshot ? " §c§l[HEADSHOT]" : "");
+        getAllPlayers().forEach(p -> p.sendActionBar(net.kyori.adventure.text.Component.text(feedMsg)));
+        // ELIMINATED title for victim
+        showTitle(victim,
+                Component.text("ELIMINATED").color(NamedTextColor.RED),
+                Component.text("Wait for next round").color(NamedTextColor.GRAY));
 
         // Announce if drops spike
-        if (spike.getCarrierUUID() != null && spike.getCarrierUUID().equals(victim.getUniqueId())) {
+        if (droppedSpike) {
             broadcast(ValorantMC.colorize("&cThe Spike has been dropped at "
                     + formatLoc(victim.getLocation()) + "!"));
         }
@@ -443,11 +557,18 @@ public class ValorantGame {
     private void giveStartingWeapons() {
         getAllPlayers().forEach(p -> {
             p.getInventory().clear();
-            // Slot 0 = primary (empty until bought), Slot 1 = Classic, Slot 2 = Knife
+            // Slot 0 = primary (empty until bought), Slot 1 = Classic, Slot 2 = Knife,
+            // Slot 3 = Spike (only for spike carrier — added later), Slots 4-7 = abilities
             Weapon classic = new Weapon(WeaponType.CLASSIC);
             p.getInventory().setItem(1, classic.toItemStack(p.getUniqueId()));
             Weapon knife = new Weapon(WeaponType.KNIFE);
             p.getInventory().setItem(2, knife.toItemStack(p.getUniqueId()));
+            // Re-apply abilities for the player's selected agent (slots 4-7)
+            Agent agent = playerAgents.get(p.getUniqueId());
+            if (agent != null) {
+                agent.onRoundStart(p);
+                agent.giveAbilityItems(p);
+            }
             // Hold the Classic by default so players can immediately shoot
             p.getInventory().setHeldItemSlot(1);
             // Prime WeaponManager state so first shot works
@@ -473,11 +594,14 @@ public class ValorantGame {
     private void reviveAll() {
         attackers.reviveAll();
         defenders.reviveAll();
+        damageContributors.clear();
         getAllPlayers().forEach(p -> {
             playerHealth.put(p.getUniqueId(), 100);
             playerShield.put(p.getUniqueId(), 0);
             p.setHealth(20);
             p.setFoodLevel(20);
+            p.clearActivePotionEffects();
+            p.setSpectatorTarget(null);
             p.setGameMode(GameMode.ADVENTURE);
         });
     }
@@ -515,6 +639,21 @@ public class ValorantGame {
         broadcast(ValorantMC.colorize("&a&lMap: &f" + map.getDisplayName()));
     }
 
+    /** Broadcast a title + subtitle to all players in the game */
+    private void broadcastTitle(Component main, Component sub) {
+        Title.Times times = Title.Times.times(
+                Duration.ofMillis(300), Duration.ofMillis(2500), Duration.ofMillis(600));
+        Title title = Title.title(main, sub, times);
+        getAllPlayers().forEach(p -> p.showTitle(title));
+    }
+
+    /** Show a personalised title to one player */
+    private void showTitle(Player player, Component main, Component sub) {
+        Title.Times times = Title.Times.times(
+                Duration.ofMillis(300), Duration.ofMillis(2500), Duration.ofMillis(600));
+        player.showTitle(Title.title(main, sub, times));
+    }
+
     // ── Scoreboard ────────────────────────────────────────────────────────────
 
     private void setupScoreboard() {
@@ -542,8 +681,8 @@ public class ValorantGame {
                 .filter(p -> !attackers.isDead(p)).count();
         long dAlive = defenders.getOnlinePlayers().stream()
                 .filter(p -> !defenders.isDead(p)).count();
-        setScore(ValorantMC.colorize("&cAtk alive: &f" + aAlive + "/" + attackers.size()), line--);
-        setScore(ValorantMC.colorize("&bDef alive: &f" + dAlive + "/" + defenders.size()), line--);
+        setScore(ValorantMC.colorize("&c⚔ Atk: &f" + aAlive + "&8/" + attackers.size()), line--);
+        setScore(ValorantMC.colorize("&b🛡 Def: &f" + dAlive + "&8/" + defenders.size()), line--);
         setScore(ValorantMC.colorize("&r   "), line--);
         setScore(ValorantMC.colorize("&8valorantmc"), line);
 
@@ -595,6 +734,55 @@ public class ValorantGame {
         return "(" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ() + ")";
     }
 
+    /** Called by AbilityListener when the spike finishes planting. */
+    public void announceSpikePlanted(Location loc) {
+        // Title: defenders see urgent warning, attackers see confirmation
+        attackers.getOnlinePlayers().forEach(p -> {
+            Title.Times t = Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(2000), Duration.ofMillis(400));
+            p.showTitle(Title.title(
+                    Component.text("SPIKE PLANTED").color(NamedTextColor.GREEN),
+                    Component.text("Defend until detonation!").color(NamedTextColor.GRAY), t));
+        });
+        defenders.getOnlinePlayers().forEach(p -> {
+            Title.Times t = Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(2000), Duration.ofMillis(400));
+            p.showTitle(Title.title(
+                    Component.text("SPIKE PLANTED").color(NamedTextColor.RED),
+                    Component.text("DEFUSE IT!").color(NamedTextColor.YELLOW), t));
+        });
+        broadcast(ValorantMC.colorize("&c&lSPIKE PLANTED &7at " + formatLoc(loc) + "!"));
+    }
+
+    /** Called by AbilityListener when the spike is defused. */
+    public void announceSpikeDefused() {
+        broadcastTitle(
+                Component.text("SPIKE DEFUSED").color(NamedTextColor.AQUA),
+                Component.text("Defenders win the round!").color(NamedTextColor.GRAY));
+        broadcast(ValorantMC.colorize("&b&lSPIKE DEFUSED!"));
+    }
+
+    // ── Admin controls ────────────────────────────────────────────────────────
+
+    private boolean paused = false;
+
+    public void pause() {
+        if (paused) return;
+        paused = true;
+        if (timerTask != null) { timerTask.cancel(); timerTask = null; }
+        broadcast(ValorantMC.colorize("&e&l[ADMIN] &eGame paused."));
+        updateBossBar("PAUSED", bossBar != null ? bossBar.progress() : 1f);
+    }
+
+    public void resume() {
+        if (!paused) return;
+        paused = false;
+        broadcast(ValorantMC.colorize("&a&l[ADMIN] &aGame resumed."));
+        // Re-enter the current state
+        if (state == GameState.ROUND_ACTIVE) startRound();
+        else if (state == GameState.BUY_PHASE) startBuyPhase();
+    }
+
+    public boolean isPaused() { return paused; }
+
     // ── Getters ───────────────────────────────────────────────────────────────
 
     public String         getId()           { return id;          }
@@ -629,6 +817,17 @@ public class ValorantGame {
     public int getHealth(Player p)  { return playerHealth.getOrDefault(p.getUniqueId(), 100); }
     public int getShield(Player p)  { return playerShield.getOrDefault(p.getUniqueId(), 0);   }
 
+    /**
+     * Heal a player directly, bypassing shield absorption.
+     * HP is capped at 100. Also updates the Minecraft health bar.
+     */
+    public void heal(Player p, int amount) {
+        if (!playerHealth.containsKey(p.getUniqueId())) return;
+        int newHp = Math.min(100, playerHealth.get(p.getUniqueId()) + amount);
+        playerHealth.put(p.getUniqueId(), newHp);
+        p.setHealth(Math.max(0.5, (newHp / 100.0) * 20.0));
+    }
+
     public void setShield(Player p, int shield) {
         playerShield.put(p.getUniqueId(), Math.min(shield, 50));
     }
@@ -638,7 +837,14 @@ public class ValorantGame {
     }
 
     public Agent  getAgent(Player p)  { return playerAgents.get(p.getUniqueId());  }
-    public void   setAgent(Player p, Agent a) { playerAgents.put(p.getUniqueId(), a); }
+    public void   setAgent(Player p, Agent a) {
+        playerAgents.put(p.getUniqueId(), a);
+        if (state == GameState.AGENT_SELECT) {
+            broadcast(ValorantMC.colorize(
+                    (getTeam(p) != null ? getTeam(p).getChatColor() : "") + p.getName()
+                    + " &7selected &b" + a.getDisplayName() + "&7!"));
+        }
+    }
     public Weapon getWeapon(Player p) { return playerWeapons.get(p.getUniqueId()); }
     public void   setWeapon(Player p, Weapon w) { playerWeapons.put(p.getUniqueId(), w); }
 

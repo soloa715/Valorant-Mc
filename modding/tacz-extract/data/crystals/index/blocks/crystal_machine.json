@@ -1,0 +1,8 @@
+{
+  "name": "crystals.block.crystal_machine.name",
+  "display": "crystals:crystal_machine",
+  "data": "crystals:crystal_machine",
+  "tooltip": "crystals.block.crystal_machine.desc",
+  "id": "tacz:workbench_b",
+  "sort": 1
+}

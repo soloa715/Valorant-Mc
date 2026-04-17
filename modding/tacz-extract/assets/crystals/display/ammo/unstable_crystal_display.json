@@ -1,0 +1,29 @@
+{
+  "slot": "crystals:ammo/slot/unstable_crystal",
+  "model": "crystals:ammo/unstable_crystal",
+  "texture": "crystals:ammo/uv/unstable_crystal",
+  "shell": {
+    "model": "crystals:shell/unstable_crystal_shell",
+    "texture": "crystals:shell/unstable_crystal_shell"
+  },
+  "tracer_color": "#FFFFFF",
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.75,
+        0.75,
+        0.75
+      ],
+      "ground": [
+        0.75,
+        0.75,
+        0.75
+      ],
+      "fixed": [
+        1.5,
+        1.5,
+        1.5
+      ]
+    }
+  }
+}

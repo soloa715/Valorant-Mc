@@ -1,0 +1,138 @@
+{
+  "ammo": "crystals:crystal_acp",
+  "ammo_amount": 1,
+  "extended_mag_ammo_amount": [
+    7,
+    7,
+    7
+  ],
+  "can_crawl": false,
+  "can_slide": false,
+  "bolt": "open_bolt",
+  "rpm": 600,
+  "bullet": {
+    "life": 2,
+    "bullet_amount": 1,
+    "damage": 80,
+    "tracer_count_interval": 0,
+    "speed": 500,
+    "gravity": 0,
+    "knockback": 0,
+    "friction": 0,
+    "ignite_entity_time": 2,
+    "pierce": 2,
+    "extra_damage": {
+      "armor_ignore": 1,
+      "head_shot_multiplier": 5,
+      "damage_adjust": [
+        {
+          "distance": "infinite",
+          "damage": 80
+        }
+      ]
+    }
+  },
+  "fire_sound": {
+    "fire_multiplier": 1,
+    "silence_multiplier": 0.8
+  },
+  "reload": {
+    "type": "magazine",
+    "infinite": false,
+    "feed": {
+      "empty": 1.5,
+      "tactical": 0.7
+    },
+    "cooldown": {
+      "empty": 1.5,
+      "tactical": 0.7
+    }
+  },
+  "draw_time": 0.75,
+  "put_away_time": 0,
+  "aim_time": 0.1,
+  "sprint_time": 0.05,
+  "weight": 1.5,
+  "movement_speed": {
+    "base": 0,
+    "aim": -0.1,
+    "reload": -0.05
+  },
+  "fire_mode": [
+    "semi"
+  ],
+  "crawl_recoil_multiplier": 0.5,
+  "recoil": {
+    "pitch": [
+      {
+        "time": 0,
+        "value": [
+          0.66,
+          0.66
+        ]
+      },
+      {
+        "time": 0.1,
+        "value": [
+          0.66,
+          0.66
+        ]
+      },
+      {
+        "time": 0.45,
+        "value": [
+          -0.175,
+          -0.175
+        ]
+      },
+      {
+        "time": 0.6,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ],
+    "yaw": [
+      {
+        "time": 0,
+        "value": [
+          -0.23,
+          0.18
+        ]
+      },
+      {
+        "time": 0.35,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "hurt_bob_tweak_multiplier": 0.05,
+  "inaccuracy": {
+    "stand": 0,
+    "move": 0,
+    "sneak": 0,
+    "lie": 0,
+    "aim": 0
+  },
+  "melee": {
+    "distance": 1,
+    "cooldown": 0.7,
+    "default": {
+      "animation_type": "melee_push",
+      "distance": 1,
+      "range_angle": 40,
+      "cooldown": 0,
+      "damage": 1,
+      "knockback": 0.5,
+      "prep": 0.1
+    }
+  },
+  "allow_attachment_types": [
+    "muzzle",
+    "extended_mag"
+  ]
+}

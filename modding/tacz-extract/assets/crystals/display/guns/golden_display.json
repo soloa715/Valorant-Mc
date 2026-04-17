@@ -1,0 +1,47 @@
+{
+  "model": "crystals:gun/golden_geo",
+  "texture": "crystals:gun/uv/golden",
+  "uv": [
+    "crystals:gun/uv/golden",
+    "crystals:gun/uv/golden_n",
+    "crystals:gun/uv/golden_s"
+  ],
+  "iron_zoom": 1.33,
+  "zoom_model_fov": 45,
+  "ammo_count_style": "normal",
+  "damage_style": "per_projectile",
+  "show_crosshair": false,
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "ground": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "fixed": [
+        1.2,
+        1.2,
+        1.2
+      ]
+    }
+  },
+  "sounds": {
+    "shoot": "crystals:golden/shoot",
+    "shoot_3p": "crystals:golden/shoot_3p",
+    "reload_empty": "crystals:golden/reload_empty",
+    "reload_tactical": "crystals:golden/reload_tactical",
+    "inspect": "crystals:golden/inspect",
+    "draw": "crystals:golden/draw",
+    "kill": "valorant:kill"
+  },
+  "animation": "crystals:golden",
+  "use_default_animation": "pistol",
+  "third_person_animation": "default",
+  "hud": "crystals:gun/hud/golden",
+  "slot": "crystals:gun/slot/golden"
+}

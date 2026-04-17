@@ -35,8 +35,8 @@ public class Reyna extends Agent {
         if (!abilityC.canUse()) { player.sendMessage(ValorantMC.colorize("&cLeer has no charges!")); return; }
         abilityC.consume();
 
-        Location eye = player.getTargetBlock(null, 15).getLocation().add(0.5, 1, 0.5);
-        player.getWorld().spawnParticle(Particle.CRIT_MAGIC, eye, 30, 0.3, 0.3, 0.3, 0.1);
+        Location eye = safeTarget(player, 15).add(0.5, 1, 0.5);
+        player.getWorld().spawnParticle(Particle.ENCHANTED_HIT, eye, 30, 0.3, 0.3, 0.3, 0.1);
         player.getWorld().playSound(eye, Sound.ENTITY_ENDERMAN_STARE, 0.7f, 1.5f);
 
         // Blind enemies in range
@@ -46,7 +46,7 @@ public class Reyna extends Agent {
             if (game.getTeam(nearby).getSide().equals(game.getTeam(player).getSide())) continue;
             if (nearby.getLocation().distance(eye) <= 8) {
                 nearby.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS,  30, 0, false, false));
-                nearby.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 30, 0, false, false));
+                nearby.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 30, 0, false, false));
                 nearby.sendActionBar(ValorantMC.colorize("&c[Leer] &fYou've been near-sighted!"));
             }
         }
@@ -59,12 +59,10 @@ public class Reyna extends Agent {
         if (soulOrbs <= 0) { player.sendMessage(ValorantMC.colorize("&cNo soul orbs! Get a kill first.")); return; }
         soulOrbs--;
 
-        // Heal + overheal up to 150hp
+        // Devour: heal up to 100 HP (game.heal caps at 100, updates both maps)
         int current = game.getHealth(player);
-        int healed  = Math.min(100, 150 - current);
-        // We apply healing via negative damage (hack in ValorantGame.applyDamage)
-        // but Devour over-heals above 100, so do it manually:
-        player.setHealth(Math.min(20, player.getHealth() + healed / 5.0));
+        int healed  = Math.min(100, 100 - current);
+        if (healed > 0) game.heal(player, healed);
         player.sendMessage(ValorantMC.colorize("&c[Reyna] &fDevoured! +" + healed + "hp"));
         player.getWorld().spawnParticle(Particle.HEART, player.getLocation().add(0, 1, 0), 10, 0.5, 0.5, 0.5, 0.1);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);
@@ -76,7 +74,7 @@ public class Reyna extends Agent {
         if (soulOrbs <= 0) { player.sendMessage(ValorantMC.colorize("&cNo soul orbs! Get a kill first.")); return; }
         soulOrbs--;
 
-        player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 255, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 255, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 40, 0, false, false));
         player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation(), 50, 0.5, 1, 0.5, 0.2);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
@@ -90,7 +88,7 @@ public class Reyna extends Agent {
         abilityX.activateUlt();
 
         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,       200, 2, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING,       200, 2, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE,       200, 2, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 1, false, false));
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1.5f);
         game.broadcast(ValorantMC.colorize("&c[Reyna] &f" + player.getName() + " activated &cEmpress&f!"));

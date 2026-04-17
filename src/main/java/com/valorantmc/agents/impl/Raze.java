@@ -35,7 +35,7 @@ public class Raze extends Agent {
         // Propel upward and forward
         org.bukkit.util.Vector v = player.getLocation().getDirection().multiply(1.5).setY(1.2);
         player.setVelocity(v);
-        player.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, player.getLocation(), 3);
+        player.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, player.getLocation(), 3);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 1.5f);
         player.sendMessage(ValorantMC.colorize("&6[Raze] &fBlast Pack!"));
     }
@@ -88,7 +88,7 @@ public class Raze extends Agent {
                     if (nearestDist < 1.5) {
                         // Explode
                         bot.getWorld().createExplosion(bot.getLocation(), 0f);
-                        bot.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, bot.getLocation(), 5);
+                        bot.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, bot.getLocation(), 5);
                         game.applyDamage(player, nearestEnemy, 80, false, false);
                         bot.remove();
                         cancel();
@@ -128,7 +128,7 @@ public class Raze extends Agent {
                 if (ticks > 40) { cancel(); return; }
                 pos[0] = pos[0].add(dir);
                 pos[0].getWorld().spawnParticle(Particle.FLAME, pos[0], 8, 0.3, 0.3, 0.3, 0.05);
-                pos[0].getWorld().spawnParticle(Particle.SMOKE_LARGE, pos[0], 4, 0.2, 0.2, 0.2, 0.02);
+                pos[0].getWorld().spawnParticle(Particle.LARGE_SMOKE, pos[0], 4, 0.2, 0.2, 0.2, 0.02);
 
                 if (pos[0].getBlock().getType().isSolid()) {
                     // Explode
@@ -152,11 +152,13 @@ public class Raze extends Agent {
 
     private void explodeShowstopper(Location center, Player shooter, ValorantGame game) {
         center.getWorld().createExplosion(center, 0f, false, false);
-        center.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, center, 5);
+        center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 5);
         center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.5f);
 
         for (Player p : center.getWorld().getPlayers()) {
             if (p.equals(shooter)) continue;
+            if (game.getTeam(p) == null) continue;
+            if (game.getTeam(p).getSide().equals(game.getTeam(shooter).getSide())) continue;
             double dist = p.getLocation().distance(center);
             if (dist <= 5) {
                 int dmg = (int) (200 * (1 - dist / 5.0));

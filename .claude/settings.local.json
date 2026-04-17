@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn clean:*)",
+      "Bash(cmd.exe /c \"mvn clean package\")",
+      "Bash(cmd.exe //c \"mvn clean package\")",
+      "Bash(cmd.exe //c \"run-server.bat\")",
+      "Bash(where mvn.cmd)",
+      "Bash(where javac:*)",
+      "Bash(\"C:/ProgramData/chocolatey/lib/maven/apache-maven-3.9.14/bin/mvn.cmd\" clean:*)",
+      "Bash(\"/c/ProgramData/chocolatey/lib/maven/apache-maven-3.9.14/bin/mvn.cmd\" clean:*)",
+      "Bash(\"/c/ProgramData/chocolatey/lib/maven/apache-maven-3.9.14/bin/mvn.cmd\" -q package -DskipTests)",
+      "Bash(\"/c/ProgramData/chocolatey/lib/maven/apache-maven-3.9.14/bin/mvn.cmd\" -q clean compile)",
+      "WebFetch(domain:kingdomarchives.com)",
+      "Bash(findstr /i \"ERROR\\\\|error\\\\|cannot find symbol\\\\|BUILD\")",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:repo.papermc.io)",
+      "Bash(curl -s \"https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml\")",
+      "Bash(curl -s \"https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/26.1.2.build.7-alpha/paper-api-26.1.2.build.7-alpha.pom\")",
+      "Read(//c/Users/solo/.m2/repository/io/papermc/paper/paper-api/26.1.2.build.7-alpha/**)",
+      "Bash(unzip -l paper-api-26.1.2.build.7-alpha.jar)",
+      "Bash(unzip -p paper-api-26.1.2.build.7-alpha.jar org/bukkit/Bukkit.class)",
+      "Bash(xxd)",
+      "Bash(java -version)",
+      "Bash(javac -version)",
+      "Bash(curl -s \"https://mohistmc.com/api/v2/projects/mohist/26.1.2/builds\")",
+      "Bash(curl -s \"https://mohistmc.com/api/v2/projects/mohist\")",
+      "Bash(curl -s \"https://mohistmc.com/api/v2/projects\")",
+      "Bash(curl -s \"https://api.papermc.io/v2/projects/paper/versions/26.1.2/builds\")",
+      "Bash(curl -s \"https://api.papermc.io/v2/projects/paper\")",
+      "Bash(curl -s \"https://api.papermc.io/v2/projects/paper/versions/1.21.11/builds\")",
+      "Bash(curl -s \"https://api.papermc.io/v2/projects/paper/versions/1.21.11/builds/69\")"
+    ]
+  }
+}

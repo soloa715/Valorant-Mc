@@ -177,7 +177,7 @@ public class Spike {
             plantLocation.getWorld().createExplosion(plantLocation, 0f, false, false);
             plantLocation.getWorld().playSound(plantLocation, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.5f);
             // Visual: spawn lots of fireworks/particles
-            plantLocation.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, plantLocation, 20);
+            plantLocation.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, plantLocation, 20);
             plantLocation.getWorld().spawnParticle(Particle.FLAME, plantLocation, 80, 3, 3, 3, 0.2);
         }
 
@@ -235,10 +235,20 @@ public class Spike {
         if (state != SpikeState.CARRIED && state != SpikeState.PLANTING) return;
         state = SpikeState.IDLE;
         carrierUUID = null;
+        removePlantVisual();
         if (where != null) {
             where.getWorld().dropItem(where, makeSpikeDropItem());
             where.getWorld().playSound(where, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 1f, 0.6f);
         }
+    }
+
+    /** Pick up a previously-dropped spike from the ground (attacker only). */
+    public void pickupFromGround(Player attacker) {
+        if (state != SpikeState.IDLE) return;
+        carrierUUID = attacker.getUniqueId();
+        state = SpikeState.CARRIED;
+        attacker.playSound(attacker.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
+        attacker.sendMessage(ValorantMC.getInstance().msg("spike.picked-up"));
     }
 
     private org.bukkit.inventory.ItemStack makeSpikeDropItem() {

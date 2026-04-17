@@ -35,18 +35,29 @@ public class Jett extends Agent {
         if (!abilityC.canUse()) { player.sendMessage(ValorantMC.colorize("&cCloudburst has no charges!")); return; }
         abilityC.consume();
 
-        Location target = player.getLocation().add(player.getLocation().getDirection().multiply(8));
+        Location target = safeTarget(player, 16).add(0.5, 1, 0.5);
 
-        player.getWorld().spawnParticle(Particle.CLOUD, target, 150, 1.5, 1.5, 1.5, 0.02);
+        player.getWorld().spawnParticle(Particle.CLOUD, target, 200, 1.8, 1.8, 1.8, 0.02);
         player.getWorld().playSound(target, Sound.ITEM_FIRECHARGE_USE, 1f, 1.2f);
         player.sendMessage(ValorantMC.colorize("&b[Jett] &fCloudburst deployed!"));
 
-        // Linger for 4 seconds with repeated particles
+        // Linger for 4 seconds — blind enemies who walk into the cloud
         new BukkitRunnable() {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 80) { cancel(); return; }
-                player.getWorld().spawnParticle(Particle.CLOUD, target, 15, 1.5, 1.5, 1.5, 0.01);
+                target.getWorld().spawnParticle(Particle.CLOUD, target, 20, 1.8, 1.8, 1.8, 0.01);
+                for (Player p : target.getWorld().getPlayers()) {
+                    if (p.equals(player)) continue;
+                    if (game.getTeam(p) == null) continue;
+                    if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
+                    if (p.getLocation().distance(target) <= 2.5) {
+                        p.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.BLINDNESS, 30, 0, false, false));
+                        p.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.SLOWNESS, 20, 1, false, false));
+                    }
+                }
                 ticks += 4;
             }
         }.runTaskTimer(ValorantMC.getInstance(), 0L, 4L);

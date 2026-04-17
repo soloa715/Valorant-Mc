@@ -1,0 +1,29 @@
+{
+  "slot": "crystals:ammo/slot/crystal_acp",
+  "model": "crystals:ammo/crystal_acp",
+  "texture": "crystals:ammo/uv/crystal_acp",
+  "shell": {
+    "model": "crystals:shell/crystal_acp_shell",
+    "texture": "crystals:shell/crystal_acp_shell"
+  },
+  "tracer_color": "#ff8888",
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.75,
+        0.75,
+        0.75
+      ],
+      "ground": [
+        0.75,
+        0.75,
+        0.75
+      ],
+      "fixed": [
+        1.5,
+        1.5,
+        1.5
+      ]
+    }
+  }
+}

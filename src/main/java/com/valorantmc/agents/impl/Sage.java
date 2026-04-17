@@ -62,7 +62,7 @@ public class Sage extends Agent {
         if (!abilityQ.canUse()) { player.sendMessage(ValorantMC.colorize("&cSlow Orb has no charges!")); return; }
         abilityQ.consume();
 
-        Location target = player.getTargetBlock(null, 20).getLocation();
+        Location target = safeTarget(player, 20);
         player.getWorld().spawnParticle(Particle.SNOWFLAKE, target, 100, 2, 0.5, 2, 0.05);
         player.getWorld().playSound(target, Sound.BLOCK_POWDER_SNOW_FALL, 1f, 0.8f);
         player.sendMessage(ValorantMC.colorize("&b[Sage] &fSlow Orb thrown!"));
@@ -75,7 +75,7 @@ public class Sage extends Agent {
                 player.getWorld().spawnParticle(Particle.SNOWFLAKE, target.clone().add(0, 0.5, 0), 10, 2, 0.3, 2, 0);
                 for (Player nearby : target.getWorld().getPlayers()) {
                     if (nearby.getLocation().distance(target) <= 3.5) {
-                        nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 2, false, false));
+                        nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 2, false, false));
                         if (game.getTeam(nearby) != null && game.getTeam(player) != null &&
                                 !game.getTeam(nearby).getSide().equals(game.getTeam(player).getSide())) {
                             nearby.sendActionBar(ValorantMC.colorize("&b[Slow] &fSage's Slow Orb!"));
@@ -107,7 +107,7 @@ public class Sage extends Agent {
                 if (tickCount[0] >= 60 || healedAmount[0] >= 100) { cancel(); return; }
                 int currentHp = game.getHealth(healTarget);
                 if (currentHp >= 100) { cancel(); return; }
-                game.applyDamage(null, healTarget, -5, false, false); // negative damage = heal
+                game.heal(healTarget, 5); // direct heal — bypasses shield absorption
                 healTarget.getWorld().spawnParticle(Particle.HEART, healTarget.getLocation().add(0, 1, 0), 3, 0.3, 0.3, 0.3, 0);
                 healedAmount[0] += 5;
                 tickCount[0]++;
@@ -132,8 +132,8 @@ public class Sage extends Agent {
         abilityX.activateUlt();
 
         deadAlly.setGameMode(GameMode.ADVENTURE);
-        deadAlly.setHealth(20);
-        game.getTeam(deadAlly).getDeadMembers().remove(deadAlly.getUniqueId());
+        game.heal(deadAlly, 100); // restore via game health map
+        game.getTeam(deadAlly).revive(deadAlly);
 
         player.getWorld().spawnParticle(Particle.HEART, deadAlly.getLocation(), 30, 0.5, 0.5, 0.5, 0.1);
         player.getWorld().playSound(deadAlly.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 0.8f);
