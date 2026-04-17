@@ -1,0 +1,9 @@
+{
+  "name": "valorant.gun.bulldog.name",
+  "display": "valorant:bulldog_display",
+  "data": "valorant:bulldog_data",
+  "tooltip": "valorant.gun.bulldog.desc",
+  "type": "rifle",
+  "item_type": "modern_kinetic",
+  "sort": 1
+}

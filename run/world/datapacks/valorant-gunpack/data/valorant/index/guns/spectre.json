@@ -1,0 +1,9 @@
+{
+  "name": "valorant.gun.spectre.name",
+  "display": "valorant:spectre_display",
+  "data": "valorant:spectre_data",
+  "tooltip": "valorant.gun.spectre.desc",
+  "type": "smg",
+  "item_type": "modern_kinetic",
+  "sort": 2
+}

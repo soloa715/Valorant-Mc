@@ -1,0 +1,9 @@
+{
+  "name": "valorant.gun.classic.name",
+  "display": "valorant:classic_display",
+  "data": "valorant:classic_data",
+  "tooltip": "valorant.gun.classic.desc",
+  "type": "pistol",
+  "item_type": "modern_kinetic",
+  "sort": 1
+}
