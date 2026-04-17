@@ -1,0 +1,9 @@
+{
+  "name": "valorant.gun.shorty.name",
+  "display": "valorant:shorty_display",
+  "data": "valorant:shorty_data",
+  "tooltip": "valorant.gun.shorty.desc",
+  "type": "pistol",
+  "item_type": "modern_kinetic",
+  "sort": 2
+}

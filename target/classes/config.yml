@@ -34,6 +34,19 @@ maps:
   maps-folder: "maps"
   default-world: "world"
   arena-y: 100           # Y coordinate where auto-generated arenas are built
+  # Path to the modding/maps folder (relative to server root).
+  # Default "../modding/maps" works when the server is in a "run/" subdirectory
+  # of the Valorant-Mc project folder. Adjust if your layout differs.
+  modding-dir: "../modding/maps"
+  # Map rotation order for Quick Play / auto-match
+  rotation:
+    - ascent
+    - haven
+    - pearl
+    - lotus
+    - sunset
+    - fracture
+    - abyss
 
 # Display
 display:
@@ -47,10 +60,35 @@ sounds:
   enabled: true
   spike-beep-interval: 3  # seconds between spike beeps
 
-# Resource pack (set your resource pack URL here)
+# Resource pack
+# After generating the pack (run: java BuildAssets.java in the modding/ folder),
+# host modding/dist/ValorantMC-ResourcePack.zip somewhere publicly accessible,
+# then paste the direct-download URL and its SHA-1 hash here and set enabled: true.
+#
+# Quick free hosting options:
+#   - GitHub Releases: upload the zip as a release asset, use the raw download URL
+#   - Dropbox: upload and change ?dl=0 to ?dl=1 in the share link
+#   - self-host with nginx / any web server
+#
+# Get SHA-1:  certutil -hashfile ValorantMC-ResourcePack.zip SHA1  (Windows)
+#             sha1sum ValorantMC-ResourcePack.zip                  (Linux/Mac)
 resource-pack:
   enabled: false
   url: ""
   hash: ""
   required: false
-  message: "Install the ValorantMC resource pack for custom weapon textures!"
+  message: "&aInstall the ValorantMC resource pack for custom weapon models and skins!"
+
+# Economy / VP
+economy:
+  # Starting Valorant Points for new players (cosmetics currency)
+  starting-vp: 10000
+  # Set to true to give all skins for free (no VP cost) — useful for test servers
+  free-skins: true
+
+# Permissions
+# valorantmc.admin  — admin commands (/valorant forcestart, kick, pause, etc.)
+# valorantmc.play   — join games, use /valorant join
+# valorantmc.shop   — access in-game shop
+permissions:
+  admin-bypass: true    # ops bypass all permission checks

@@ -97,8 +97,17 @@ public class MapManager {
      * The originals remain untouched as control copies.
      */
     private void autoCopyFromModding() {
-        File moddingDir = new File(plugin.getDataFolder().getParentFile().getParentFile(), "modding/maps");
+        // Default: one level above server root (i.e. Valorant-Mc/modding/maps).
+        // Configurable via maps.modding-dir in config.yml (relative to server root).
+        String moddingPath = plugin.getConfig().getString("maps.modding-dir", "../modding/maps");
+        File serverRoot = plugin.getServer().getWorldContainer();
+        File moddingDir = new File(serverRoot, moddingPath);
+        if (!moddingDir.exists()) {
+            // also try two levels up from plugin data folder (legacy path)
+            moddingDir = new File(plugin.getDataFolder().getParentFile().getParentFile(), "modding/maps");
+        }
         if (!moddingDir.exists()) return;
+        plugin.getLogger().info("[MapManager] Loading community maps from: " + moddingDir.getAbsolutePath());
 
         File serverDir = plugin.getServer().getWorldContainer();
         File[] packs = moddingDir.listFiles(File::isDirectory);

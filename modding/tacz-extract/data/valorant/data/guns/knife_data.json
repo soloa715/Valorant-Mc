@@ -1,0 +1,42 @@
+{
+  "ammo": "tacz:45acp",
+  "ammo_amount": 0,
+  "bolt": "open_bolt",
+  "can_crawl": false,
+  "can_slide": false,
+  "rpm": 120,
+  "bullet": {
+    "life": 2,
+    "bullet_amount": 1,
+    "damage": 7.50,
+    "tracer_count_interval": 0,
+    "speed": 400,
+    "gravity": 0,
+    "knockback": 0,
+    "friction": 0.02,
+    "ignite_entity_time": 2,
+    "pierce": 1,
+    "extra_damage": {
+      "armor_ignore": 0.5,
+      "head_shot_multiplier": 1.0,
+      "damage_adjust": [
+        {"distance": 20,         "damage": 7.50},
+        {"distance": 50,         "damage": 6.38},
+        {"distance": "infinite", "damage": 5.63}
+      ]
+    }
+  },
+  "reload": {
+    "type": "magazine",
+    "infinite": false,
+    "feed": { "empty": 0.00, "tactical": 0.00 },
+    "cooldown": { "empty": 0.25, "tactical": 0.25 }
+  },
+  "draw_time": 0.50,
+  "put_away_time": 0,
+  "aim_time": 0.15,
+  "sprint_time": 0.15,
+  "weight": 0.5,
+  "movement_speed": { "base": 0, "aim": 0.00, "reload": 0.00 },
+  "fire_mode": ["semi"]
+}

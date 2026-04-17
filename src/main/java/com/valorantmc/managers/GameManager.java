@@ -11,6 +11,7 @@ public class GameManager {
     private final ValorantMC plugin;
     private final Map<String, ValorantGame> games = new HashMap<>();
     private final Map<UUID, String> playerGameMap  = new HashMap<>();  // player → game id
+    private int rotationIndex = 0; // for round-robin map rotation
 
     public GameManager(ValorantMC plugin) {
         this.plugin = plugin;
@@ -123,18 +124,31 @@ public class GameManager {
         playerGameMap.put(p.getUniqueId(), game.getId());
 
         if (createdNew) {
-            // Start on a random loaded map in 3 seconds so others can join
+            // Start on the next map in the rotation (or random if rotation not configured)
             final ValorantGame g = game;
             p.sendMessage(plugin.colorize("&aMatch starting in 3 seconds..."));
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                 if (g.getState() == com.valorantmc.game.GameState.WAITING) {
-                    List<String> names = new ArrayList<>(plugin.getMapManager().getMapNames());
-                    if (!names.isEmpty()) {
-                        String map = names.get(new Random().nextInt(names.size()));
-                        g.start(map);
-                    }
+                    String map = nextRotationMap();
+                    if (map != null) g.start(map);
                 }
             }, 60L);
         }
+    }
+
+    /** Returns the next map name from the configured rotation (round-robin), or random. */
+    public String nextRotationMap() {
+        java.util.List<String> rotation = plugin.getConfig().getStringList("maps.rotation");
+        // Filter to only maps that are actually loaded
+        java.util.List<String> available = new ArrayList<>(plugin.getMapManager().getMapNames());
+        java.util.List<String> rotFiltered = new ArrayList<>();
+        for (String r : rotation) {
+            if (available.contains(r.toLowerCase())) rotFiltered.add(r.toLowerCase());
+        }
+        java.util.List<String> pool = rotFiltered.isEmpty() ? available : rotFiltered;
+        if (pool.isEmpty()) return null;
+        String map = pool.get(rotationIndex % pool.size());
+        rotationIndex = (rotationIndex + 1) % pool.size();
+        return map;
     }
 }

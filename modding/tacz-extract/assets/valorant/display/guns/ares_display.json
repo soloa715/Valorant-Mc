@@ -1,0 +1,25 @@
+{
+  "model": "valorant:odin_geo",
+  "texture": "valorant:gun/uv/odin",
+  "hud": "valorant:gun/hud/odin_hud",
+  "slot": "valorant:gun/slot/odin_slot",
+  "animation": "valorant:odin",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "show_crosshair": false,
+  "iron_zoom": 1.25,
+  "muzzle_flash": { "texture": "tacz:flash/common_muzzle_flash", "scale": 0.75 },
+  "ammo": { "tracer_color": "#FF8888" },
+  "sounds": {
+    "shoot":           "valorant:odin/odin_shoot",
+    "shoot_3p":        "valorant:odin/odin_shoot_3p",
+    "reload_empty":    "valorant:odin/odin_reload",
+    "reload_tactical": "valorant:odin/odin_reload",
+    "draw":            "valorant:odin/odin_draw",
+    "kill":            "valorant:kill"
+  },
+  "controllable": {
+    "semi": { "low_frequency": 0.25, "high_frequency": 0.5, "time": 100 },
+    "auto": { "low_frequency": 0.15, "high_frequency": 0.25, "time": 80 }
+  }
+}

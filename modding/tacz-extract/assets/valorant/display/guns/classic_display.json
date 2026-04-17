@@ -1,0 +1,25 @@
+{
+  "model": "valorant:ghost_geo",
+  "texture": "valorant:gun/uv/ghost",
+  "hud": "valorant:gun/hud/ghost_hud",
+  "slot": "valorant:gun/slot/ghost_slot",
+  "animation": "valorant:ghost",
+  "use_default_animation": "pistol",
+  "third_person_animation": "default",
+  "show_crosshair": false,
+  "iron_zoom": 1.25,
+  "muzzle_flash": { "texture": "tacz:flash/common_muzzle_flash", "scale": 0.75 },
+  "ammo": { "tracer_color": "#FF8888" },
+  "sounds": {
+    "shoot":           "valorant:ghost/ghost_shoot",
+    "shoot_3p":        "valorant:ghost/ghost_shoot_3p",
+    "reload_empty":    "valorant:ghost/ghost_reload",
+    "reload_tactical": "valorant:ghost/ghost_reload",
+    "draw":            "valorant:ghost/ghost_draw",
+    "kill":            "valorant:kill"
+  },
+  "controllable": {
+    "semi": { "low_frequency": 0.25, "high_frequency": 0.5, "time": 100 },
+    "auto": { "low_frequency": 0.15, "high_frequency": 0.25, "time": 80 }
+  }
+}
