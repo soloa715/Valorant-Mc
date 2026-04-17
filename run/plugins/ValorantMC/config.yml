@@ -47,8 +47,8 @@ sounds:
 
 # Resource pack (set your resource pack URL here)
 resource-pack:
-  enabled: false
-  url: ""
-  hash: ""
-  required: false
+  enabled: true
+  url: "https://github.com/soloa715/Valorant-Mc/raw/refs/heads/master/modding/dist/ValorantMC-ResourcePack.zip"
+  hash: "75ae7f4d287e25168d886c426ee78dc35b2e5c81"
+  required: true
   message: "Install the ValorantMC resource pack for custom weapon textures!"
