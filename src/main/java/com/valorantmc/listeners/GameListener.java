@@ -195,16 +195,37 @@ public class GameListener implements Listener {
         e.setCancelled(true);
     }
 
-    // ── Anti-cheat: flight prevention ────────────────────────────────────────
+    // ── Anti-cheat: flight prevention + spawn barrier ────────────────────────
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onMove(PlayerMoveEvent e) {
         Player p = e.getPlayer();
         if (!plugin.getGameManager().isInGame(p)) return;
+
+        // Flight prevention
         if (p.isFlying() && p.getGameMode() != GameMode.SPECTATOR) {
             p.setFlying(false);
             p.sendActionBar(net.kyori.adventure.text.Component.text(
                     "§c[Anti-cheat] Flight is disabled in ValorantMC."));
+        }
+
+        // Spawn barrier — only active during BUY_PHASE
+        ValorantGame game = plugin.getGameManager().getGame(p);
+        if (game == null || game.getState() != GameState.BUY_PHASE) return;
+        if (e.getTo() == null) return;
+        org.bukkit.Location lock = game.getSpawnLock(p);
+        if (lock == null) return;
+
+        // Only enforce if the player actually crossed the radius (ignore Y)
+        double dx = e.getTo().getX() - lock.getX();
+        double dz = e.getTo().getZ() - lock.getZ();
+        double distSq = dx * dx + dz * dz;
+        double radiusSq = com.valorantmc.game.ValorantGame.BARRIER_RADIUS
+                        * com.valorantmc.game.ValorantGame.BARRIER_RADIUS;
+        if (distSq > radiusSq) {
+            e.setCancelled(true);
+            p.sendActionBar(net.kyori.adventure.text.Component.text(
+                    "§c§l◼ SPAWN BARRIER  §r§7— Round starts soon!"));
         }
     }
 }

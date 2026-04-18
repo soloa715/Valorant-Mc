@@ -149,14 +149,7 @@ public class ShopListener implements Listener {
             agent.giveAbilityItems(player);
             player.sendMessage(plugin.msg("agents.selected").replace("{agent}", agent.getDisplayName()));
             player.closeInventory();
-
-            // During buy phase, auto-open shop (optional, can close)
-            if (game.getState() == com.valorantmc.game.GameState.BUY_PHASE
-                    || game.getState() == com.valorantmc.game.GameState.AGENT_SELECT) {
-                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                    if (player.isOnline()) player.openInventory(ShopGUI.build(player));
-                }, 10L);
-            }
+            // Shop will be opened automatically when buy phase starts — no premature open here
         }
     }
 

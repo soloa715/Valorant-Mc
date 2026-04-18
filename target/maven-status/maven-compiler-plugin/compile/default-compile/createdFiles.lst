@@ -57,6 +57,7 @@ com\valorantmc\shop\SkinGUI.class
 com\valorantmc\listeners\AbilityListener$1.class
 com\valorantmc\agents\impl\Brimstone$5.class
 com\valorantmc\listeners\ShopListener.class
+com\valorantmc\game\ValorantGame$4.class
 com\valorantmc\listeners\GameListener.class
 com\valorantmc\managers\MapManager.class
 com\valorantmc\shop\ShopGUI.class

@@ -154,19 +154,29 @@ public class MapManager {
                 }
             }
 
-            // Register as a map, pointing at a safe ground-level location near world spawn
+            // Register as a map using the world's saved spawn as the anchor point.
+            // The map creator set the world spawn at a sensible floor-level location,
+            // so we trust its Y and scan downward for solid ground at each offset.
             if (!maps.containsKey(rawName)) {
                 ValorantMap m = new ValorantMap(rawName, capitalize(rawName));
                 World w = plugin.getServer().getWorld(worldName);
                 if (w != null) {
-                    Location spawn = findSafeSpawn(w);
-                    // Default spawn points: 5 attackers north, 5 defenders south of spawn
+                    Location spawn = w.getSpawnLocation();
+                    int sx = spawn.getBlockX();
+                    int sy = spawn.getBlockY();
+                    int sz = spawn.getBlockZ();
+                    // 5 attacker spawns spread along X, slightly north (−Z)
                     for (int i = -4; i <= 4; i += 2) {
-                        m.getAttackSpawns().add(safeAt(w, spawn.getBlockX() + i, spawn.getBlockZ() - 10));
-                        m.getDefendSpawns().add(safeAt(w, spawn.getBlockX() + i, spawn.getBlockZ() + 10));
+                        m.getAttackSpawns().add(floorAt(w, sx + i, sz - 5, sy));
                     }
-                    m.getSiteA().add(safeAt(w, spawn.getBlockX() - 20, spawn.getBlockZ()));
-                    m.getSiteB().add(safeAt(w, spawn.getBlockX() + 20, spawn.getBlockZ()));
+                    // 5 defender spawns spread along X, slightly south (+Z)
+                    for (int i = -4; i <= 4; i += 2) {
+                        m.getDefendSpawns().add(floorAt(w, sx + i, sz + 5, sy));
+                    }
+                    m.getSiteA().add(floorAt(w, sx - 15, sz, sy));
+                    m.getSiteB().add(floorAt(w, sx + 15, sz, sy));
+                    plugin.getLogger().info("[MapManager] Auto-spawns anchored at "
+                            + sx + "," + sy + "," + sz + " in " + worldName);
                 }
                 maps.put(rawName, m);
             }
@@ -203,17 +213,28 @@ public class MapManager {
         }
     }
 
-    /** Find a sensible standing location near the world's saved spawn. */
-    private Location findSafeSpawn(World w) {
-        Location s = w.getSpawnLocation();
-        return safeAt(w, s.getBlockX(), s.getBlockZ());
-    }
-
-    /** Top non-air block at (x,z) +1, clamped to world height range. */
-    private Location safeAt(World w, int x, int z) {
-        int top = w.getHighestBlockYAt(x, z);
-        if (top < w.getMinHeight() + 1) top = 64;
-        return new Location(w, x + 0.5, top + 1, z + 0.5);
+    /**
+     * Find a floor-level location at (x, z) by scanning downward from startY.
+     * Looks for: solid block at Y, air at Y+1, air at Y+2 (room to stand).
+     * Falls back to startY if nothing solid is found.
+     */
+    private Location floorAt(World w, int x, int z, int startY) {
+        int minY = w.getMinHeight() + 1;
+        int maxY = Math.min(startY + 10, w.getMaxHeight() - 2);
+        // Scan a window around startY: first downward, then slightly above
+        for (int y = maxY; y >= minY; y--) {
+            org.bukkit.block.Block floor = w.getBlockAt(x, y, z);
+            org.bukkit.block.Block head1 = w.getBlockAt(x, y + 1, z);
+            org.bukkit.block.Block head2 = w.getBlockAt(x, y + 2, z);
+            if (!floor.getType().isAir()
+                    && !floor.getType().toString().contains("LEAVES")
+                    && head1.getType().isAir()
+                    && head2.getType().isAir()) {
+                return new Location(w, x + 0.5, y + 1, z + 0.5);
+            }
+        }
+        // Nothing found — return spawn Y directly (better than rooftop)
+        return new Location(w, x + 0.5, startY, z + 0.5);
     }
 
     private String capitalize(String s) {

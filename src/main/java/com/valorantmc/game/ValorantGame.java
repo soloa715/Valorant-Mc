@@ -68,6 +68,11 @@ public class ValorantGame {
     private BukkitTask timerTask;
     private BukkitTask agentSelectTask;
     private BukkitTask buyPhaseTask;
+    private BukkitTask barrierParticleTask;
+
+    // ── Spawn barriers (active only during BUY_PHASE) ─────────────────────────
+    private final java.util.Map<java.util.UUID, org.bukkit.Location> spawnLock = new java.util.HashMap<>();
+    public static final double BARRIER_RADIUS = 14.0; // blocks from spawn; players can't cross
 
     // ── Constants ─────────────────────────────────────────────────────────────
     private static final int ROUNDS_TO_WIN = 13;
@@ -201,17 +206,28 @@ public class ValorantGame {
         giveStartingWeapons();
         teleportToSpawns();
 
+        // ── Spawn barriers: lock every player to their spawn location ─────────
+        spawnLock.clear();
+        getAllPlayers().forEach(p -> spawnLock.put(p.getUniqueId(), p.getLocation().clone()));
+        startBarrierParticles();
+
         int buyDuration = plugin.getConfig().getInt("game.buy-phase-duration", 30);
         broadcast(ValorantMC.colorize("&e&lROUND " + currentRound + " — Buy Phase! &r&7(" + buyDuration + "s)"));
-        // Title announcement
         broadcastTitle(
                 Component.text("ROUND " + currentRound).color(NamedTextColor.YELLOW),
                 Component.text("BUY PHASE — " + buyDuration + "s").color(NamedTextColor.GRAY));
-        broadcast(ValorantMC.colorize("&7Use &b/vshop&7 to buy weapons and abilities."));
 
         updateScoreboard();
         final String buyLabel = "ROUND " + currentRound + " • BUY PHASE — ";
         startBossBar(BossBar.Color.YELLOW, buyLabel + formatTime(buyDuration), 1f);
+
+        // Open shop for everyone 40 ticks after teleport so inventory is stable
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (state != GameState.BUY_PHASE) return;
+            getAllPlayers().forEach(p -> {
+                p.openInventory(com.valorantmc.shop.ShopGUI.build(p));
+            });
+        }, 40L);
 
         // Buy phase countdown
         if (buyPhaseTask != null) buyPhaseTask.cancel();
@@ -222,12 +238,22 @@ public class ValorantGame {
                 remaining--;
                 updateBossBar(buyLabel + formatTime(remaining),
                         Math.max(0f, (float) remaining / Math.max(1, buyDuration)));
+                // Remind players with action bar when they don't have the shop open
+                if (remaining > 0) {
+                    getAllPlayers().forEach(p ->
+                        p.sendActionBar(ValorantMC.colorize(
+                            "&e◼ BARRIER ACTIVE &8| &7Shop: &b/vshop &8| &7" + remaining + "s")));
+                }
                 if (remaining <= 0) { startRound(); cancel(); }
             }
         }.runTaskTimer(plugin, 20L, 20L);
     }
 
     private void startRound() {
+        // Lift spawn barriers
+        spawnLock.clear();
+        stopBarrierParticles();
+
         state = GameState.ROUND_ACTIVE;
         int roundDuration = plugin.getConfig().getInt("game.round-duration", 100);
         broadcast(ValorantMC.colorize("&c&lFIGHT!"));
@@ -372,10 +398,53 @@ public class ValorantGame {
         }, 200L);
     }
 
+    // ── Spawn barrier helpers ────────────────────────────────────────────────
+
+    private void startBarrierParticles() {
+        if (barrierParticleTask != null) barrierParticleTask.cancel();
+        barrierParticleTask = new BukkitRunnable() {
+            @Override public void run() {
+                if (state != GameState.BUY_PHASE) { cancel(); return; }
+                spawnLock.forEach((uuid, center) -> {
+                    Player p = Bukkit.getPlayer(uuid);
+                    if (p == null || !p.isOnline()) return;
+                    // Draw a full circle of dust particles at the barrier edge
+                    for (int deg = 0; deg < 360; deg += 12) {
+                        double rad = Math.toRadians(deg);
+                        double x = center.getX() + BARRIER_RADIUS * Math.cos(rad);
+                        double z = center.getZ() + BARRIER_RADIUS * Math.sin(rad);
+                        // Low ring (floor level)
+                        p.spawnParticle(Particle.DUST, x, center.getY() + 0.1, z, 1, 0, 0, 0,
+                                new Particle.DustOptions(org.bukkit.Color.fromRGB(220, 50, 50), 1.4f));
+                        // Mid ring (chest height)
+                        p.spawnParticle(Particle.DUST, x, center.getY() + 1.5, z, 1, 0, 0, 0,
+                                new Particle.DustOptions(org.bukkit.Color.fromRGB(255, 100, 100), 1.2f));
+                        // Top ring (above head)
+                        p.spawnParticle(Particle.DUST, x, center.getY() + 2.8, z, 1, 0, 0, 0,
+                                new Particle.DustOptions(org.bukkit.Color.fromRGB(180, 30, 30), 1.0f));
+                    }
+                });
+            }
+        }.runTaskTimer(plugin, 0L, 6L); // every 6 ticks = 3× per second
+    }
+
+    private void stopBarrierParticles() {
+        if (barrierParticleTask != null) {
+            barrierParticleTask.cancel();
+            barrierParticleTask = null;
+        }
+    }
+
+    /** Returns the spawn-lock location for this player (non-null only during BUY_PHASE). */
+    public org.bukkit.Location getSpawnLock(Player p) {
+        return spawnLock.get(p.getUniqueId());
+    }
+
     public void shutdown() {
         if (timerTask != null) timerTask.cancel();
         if (agentSelectTask != null) agentSelectTask.cancel();
         if (buyPhaseTask != null) buyPhaseTask.cancel();
+        stopBarrierParticles();
         spike.reset();
         if (bossBar != null) {
             getAllPlayers().forEach(p -> p.hideBossBar(bossBar));

@@ -1,0 +1,14 @@
+name: ascent
+display-name: Ascent
+world: valmap_ascent
+auto-generate: false
+attack_spawns:
+- -371,-11,-122,-89,11
+- -372,-11,-125,-93,5
+defend_spawns:
+- -256,-11,-105,92,9
+- -252,-11,-105,91,6
+site_a:
+- -291,-9,-64
+site_b:
+- -284,-15,-157
