@@ -1,24 +1,24 @@
 {
   "stats": {
-    "minecraft:used": {
-      "minecraft:stone_brick_slab": 3
-    },
     "minecraft:custom": {
-      "minecraft:time_since_rest": 36919,
-      "minecraft:walk_one_cm": 13817,
-      "minecraft:leave_game": 4,
+      "minecraft:time_since_rest": 41527,
+      "minecraft:walk_one_cm": 15427,
+      "minecraft:leave_game": 5,
       "minecraft:damage_taken": 350,
-      "minecraft:play_time": 44216,
-      "minecraft:jump": 169,
-      "minecraft:time_since_death": 36918,
-      "minecraft:sprint_one_cm": 27951,
-      "minecraft:fall_one_cm": 4323,
-      "minecraft:total_world_time": 44216,
-      "minecraft:fly_one_cm": 149539,
+      "minecraft:play_time": 48824,
+      "minecraft:jump": 196,
+      "minecraft:time_since_death": 41526,
+      "minecraft:sprint_one_cm": 35844,
+      "minecraft:fall_one_cm": 5273,
+      "minecraft:total_world_time": 48824,
+      "minecraft:fly_one_cm": 155528,
       "minecraft:crouch_one_cm": 81,
       "minecraft:walk_on_water_one_cm": 151,
-      "minecraft:sneak_time": 191,
+      "minecraft:sneak_time": 200,
       "minecraft:deaths": 1
+    },
+    "minecraft:used": {
+      "minecraft:stone_brick_slab": 3
     }
   },
   "DataVersion": 4671
