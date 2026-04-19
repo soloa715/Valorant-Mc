@@ -139,7 +139,7 @@ public class ShopManager {
             return false;
         }
         // Use VP currency unless server is in free-skins mode
-        boolean freeSkins = plugin.getConfig().getBoolean("free-skins", true);
+        boolean freeSkins = plugin.getConfig().getBoolean("economy.free-skins", true);
         int vpCost = skin.tier().vp;
         if (!freeSkins && vpCost > 0) {
             if (!plugin.getEconomyManager().canAffordVP(p, vpCost)) {
@@ -157,7 +157,7 @@ public class ShopManager {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private int getPreferredSlot(WeaponType type) {
+    public int getPreferredSlot(WeaponType type) {
         // Slot layout (must match Agent.giveAbilityItems and ValorantGame.giveStartingWeapons):
         //   0 = primary    1 = sidearm    2 = knife    3 = spike
         //   4 = C   5 = Q   6 = E   7 = X (ult)   8 = unused/buy hint

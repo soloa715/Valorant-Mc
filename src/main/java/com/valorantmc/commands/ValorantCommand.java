@@ -12,10 +12,13 @@ import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ValorantCommand implements CommandExecutor, TabCompleter {
 
     private final ValorantMC plugin;
+    /** Players who have voted to skip buy phase this round. Key = gameId:roundNumber. */
+    private final Map<String, Set<UUID>> skipVotes = new ConcurrentHashMap<>();
 
     public ValorantCommand(ValorantMC plugin) {
         this.plugin = plugin;
@@ -35,6 +38,7 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
             case "vuse"       -> { return handleUseAbility(sender, args); }
             case "vskin"      -> { return handleSkinGui(sender); }
             case "vplay"      -> { return handlePlayLobby(sender); }
+            case "vskip"      -> { return handleSkipVote(sender); }
         }
 
         // Main /valorant command
@@ -310,6 +314,33 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
     private boolean handleSkinGui(CommandSender sender) {
         if (!(sender instanceof Player p)) return true;
         p.openInventory(com.valorantmc.shop.SkinGUI.build(p, null));
+        return true;
+    }
+
+    private boolean handleSkipVote(CommandSender sender) {
+        if (!(sender instanceof Player p)) { sender.sendMessage(plugin.msg("errors.player-only")); return true; }
+        ValorantGame game = plugin.getGameManager().getGame(p);
+        if (game == null) { p.sendMessage(plugin.msg("game.not-in-game")); return true; }
+        if (game.getState() != com.valorantmc.game.GameState.BUY_PHASE) {
+            p.sendMessage(ValorantMC.colorize("&cCan only vote to skip during the buy phase."));
+            return true;
+        }
+        // Key includes round number so votes reset automatically each round
+        String voteKey = game.getId() + ":" + game.getCurrentRound();
+        Set<UUID> votes = skipVotes.computeIfAbsent(voteKey, k -> ConcurrentHashMap.newKeySet());
+        if (!votes.add(p.getUniqueId())) {
+            p.sendMessage(ValorantMC.colorize("&7You already voted to skip."));
+            return true;
+        }
+        int total = game.getAllPlayers().size();
+        int needed = Math.max(1, (int) Math.ceil(total * 0.6)); // 60% needed
+        game.broadcast(ValorantMC.colorize("&e" + p.getName() + " &7voted to skip buy phase. &8("
+                + votes.size() + "/" + needed + " needed)"));
+        if (votes.size() >= needed) {
+            skipVotes.remove(voteKey);
+            game.broadcast(ValorantMC.colorize("&a&lSkip vote passed! &fStarting round now..."));
+            game.adminSkipBuyPhase();
+        }
         return true;
     }
 

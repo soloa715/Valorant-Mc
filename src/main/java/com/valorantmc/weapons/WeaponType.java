@@ -106,6 +106,19 @@ public enum WeaponType {
     /** Leg-shot multiplier */
     public double getLegMultiplier() { return 0.85; }
 
+    /** Effective raycast range in blocks */
+    public double getMaxRange() {
+        return switch (category) {
+            case SNIPER  -> 200;
+            case RIFLE   -> 100;
+            case HEAVY   -> 80;
+            case SMG     -> 65;
+            case SIDEARM -> 50;
+            case SHOTGUN -> 22;
+            case MELEE   -> 3;
+        };
+    }
+
     /** Fire-rate expressed as ticks between shots (20 ticks = 1 second). */
     public int getTicksBetweenShots() {
         return Math.max(1, (int) (20.0 / fireRate));

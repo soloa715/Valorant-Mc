@@ -114,10 +114,12 @@ public class ShopGUI {
 
         // Store weapon id in NBT
         ItemMeta meta = item.getItemMeta();
-        meta.getPersistentDataContainer().set(
-                new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "shop_weapon"),
-                org.bukkit.persistence.PersistentDataType.STRING, type.name());
-        item.setItemMeta(meta);
+        if (meta != null) {
+            meta.getPersistentDataContainer().set(
+                    new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "shop_weapon"),
+                    org.bukkit.persistence.PersistentDataType.STRING, type.name());
+            item.setItemMeta(meta);
+        }
         inv.setItem(slot, item);
     }
 
@@ -133,10 +135,12 @@ public class ShopGUI {
         );
         ItemStack item = buildItem(mat, ValorantMC.colorize("&f&l" + name), new ArrayList<>(lore));
         ItemMeta meta = item.getItemMeta();
-        meta.getPersistentDataContainer().set(
-                new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "shop_armor"),
-                org.bukkit.persistence.PersistentDataType.STRING, id);
-        item.setItemMeta(meta);
+        if (meta != null) {
+            meta.getPersistentDataContainer().set(
+                    new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "shop_armor"),
+                    org.bukkit.persistence.PersistentDataType.STRING, id);
+            item.setItemMeta(meta);
+        }
         inv.setItem(slot, item);
     }
 
@@ -155,22 +159,42 @@ public class ShopGUI {
         };
         if (ability == null) return;
 
+        // Free/signature abilities (cost=0) are not sold in the shop
+        if (ability.cost == 0) {
+            List<String> lore = new ArrayList<>();
+            lore.add(ValorantMC.colorize("&7Ability [" + key + "]: &b" + agent.getDisplayName()));
+            lore.add(ValorantMC.colorize("&7Charges: &f" + ability.getCurrentCharges() + "/" + ability.charges));
+            lore.add("");
+            lore.add(ValorantMC.colorize("&aFree signature — auto-granted each round"));
+            inv.setItem(slot, buildItem(Material.LIME_DYE,
+                    ValorantMC.colorize("&a[" + key + "] " + ability.name + " §8(Free)"), lore));
+            return;
+        }
+
+        // Already at max charges — gray out to prevent wasted purchase
+        if (ability.getCurrentCharges() >= ability.charges) {
+            List<String> lore = new ArrayList<>();
+            lore.add(ValorantMC.colorize("&7Ability [" + key + "]: &b" + agent.getDisplayName()));
+            lore.add(ValorantMC.colorize("&7Charges: &a" + ability.getCurrentCharges() + "/" + ability.charges));
+            lore.add("");
+            lore.add(ValorantMC.colorize("&7Already purchased for this round."));
+            inv.setItem(slot, buildItem(Material.GRAY_DYE,
+                    ValorantMC.colorize("&8[" + key + "] " + ability.name + " §7✔ Bought"), lore));
+            return;
+        }
+
         boolean canAfford = ValorantMC.getInstance().getEconomyManager().canAfford(player, ability.cost);
         List<String> lore = new ArrayList<>();
         lore.add(ValorantMC.colorize("&7Ability [" + key + "]: &b" + agent.getDisplayName()));
         lore.add(ValorantMC.colorize("&7Charges: &f" + ability.getCurrentCharges() + "/" + ability.charges));
         lore.add("");
-        if (ability.cost == 0) {
-            lore.add(ValorantMC.colorize("&aFree signature ability"));
-        } else {
-            lore.add(ValorantMC.colorize((canAfford ? "&a" : "&c") + "Cost: &6" + ability.cost + "c/charge"));
-        }
+        lore.add(ValorantMC.colorize((canAfford ? "&a" : "&c") + "Cost: &6" + ability.cost + "c/charge"));
         lore.add("");
-        lore.add(ValorantMC.colorize(canAfford || ability.cost == 0 ? "&eClick to buy!" : "&cInsufficient credits"));
+        lore.add(ValorantMC.colorize(canAfford ? "&eClick to buy!" : "&cInsufficient credits"));
 
         ItemStack item = buildItem(
-                ability.cost == 0 ? Material.LIME_DYE : Material.YELLOW_DYE,
-                ValorantMC.colorize("&f&l[" + key + "] " + ability.name),
+                Material.YELLOW_DYE,
+                ValorantMC.colorize((canAfford ? "&f" : "&8") + "&l[" + key + "] " + ability.name),
                 lore);
         ItemMeta meta = item.getItemMeta();
         meta.getPersistentDataContainer().set(
@@ -188,6 +212,7 @@ public class ShopGUI {
     private static ItemStack buildItem(Material mat, String name, List<String> lore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
+        if (meta == null) return item; // should never happen with a valid material
         meta.setDisplayName(name);
         meta.setLore(new ArrayList<>(lore));
         meta.setUnbreakable(true);

@@ -66,11 +66,20 @@ public final class ValorantMC extends JavaPlugin {
         getCommand("vskin").setExecutor(cmd);
         getCommand("vplay").setExecutor(cmd);
         Objects.requireNonNull(getCommand("vmapsetup")).setExecutor(new com.valorantmc.commands.MapSetupCommand(this));
+        Objects.requireNonNull(getCommand("vadmin")).setExecutor(
+                (sender, cmd2, label, args) -> {
+                    if (!(sender instanceof org.bukkit.entity.Player p)) { sender.sendMessage("Players only."); return true; }
+                    if (!p.hasPermission("valorantmc.admin")) { p.sendMessage(colorize("&cNo permission.")); return true; }
+                    com.valorantmc.game.ValorantGame g = gameManager.getGame(p);
+                    p.openInventory(com.valorantmc.gui.AdminGUI.buildMain(p, g));
+                    return true;
+                });
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new WeaponListener(this), this);
         getServer().getPluginManager().registerEvents(new GameListener(this), this);
         getServer().getPluginManager().registerEvents(new ShopListener(this), this);
+        getServer().getPluginManager().registerEvents(new com.valorantmc.listeners.AdminListener(this), this);
         abilityListener = new AbilityListener(this);
         getServer().getPluginManager().registerEvents(abilityListener, this);
 

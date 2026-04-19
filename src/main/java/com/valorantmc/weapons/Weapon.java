@@ -33,8 +33,8 @@ public class Weapon {
 
     public Weapon(WeaponType type) {
         this.type        = type;
-        this.currentAmmo = type.getMagazineSize();
-        this.reserveAmmo = type.getMagazineSize() * 3;
+        this.currentAmmo = type.isMelee() ? 0 : type.getMagazineSize();
+        this.reserveAmmo = type.isMelee() ? 0 : type.getMagazineSize() * 3;
         this.appliedSkin = "default";
         this.reloading   = false;
     }
@@ -42,6 +42,7 @@ public class Weapon {
     // ── Ammo helpers ─────────────────────────────────────────────────────────
 
     public boolean canShoot() {
+        if (type.isMelee()) return !reloading; // melee never needs ammo
         return !reloading && currentAmmo > 0;
     }
 

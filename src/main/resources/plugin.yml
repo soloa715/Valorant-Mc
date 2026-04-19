@@ -44,6 +44,11 @@ commands:
     description: Open the lobby GUI
     aliases: [play, lobby]
     usage: /vplay
+  vadmin:
+    description: Open the admin panel GUI
+    aliases: [admin, ap]
+    usage: /vadmin
+    permission: valorantmc.admin
   vmapsetup:
     description: In-game map setup wizard for server hosters
     aliases: [mapsetup, vmap]

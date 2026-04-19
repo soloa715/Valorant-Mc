@@ -91,10 +91,12 @@ public class AgentSelectGUI {
                 ValorantMC.colorize(nameColor + "&l" + agent.getDisplayName()), lore);
 
         ItemMeta meta = item.getItemMeta();
-        meta.getPersistentDataContainer().set(
-                new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "select_agent"),
-                org.bukkit.persistence.PersistentDataType.STRING, agent.getName());
-        item.setItemMeta(meta);
+        if (meta != null) {
+            meta.getPersistentDataContainer().set(
+                    new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "select_agent"),
+                    org.bukkit.persistence.PersistentDataType.STRING, agent.getName());
+            item.setItemMeta(meta);
+        }
         return item;
     }
 
@@ -106,6 +108,7 @@ public class AgentSelectGUI {
     private static ItemStack buildItem(Material mat, String name, List<String> lore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta  = item.getItemMeta();
+        if (meta == null) return item;
         meta.setDisplayName(name);
         meta.setLore(new ArrayList<>(lore));
         item.setItemMeta(meta);

@@ -41,6 +41,8 @@ public abstract class Agent {
         public void    addUltPoint()          { ultimateProgress++; }
         public boolean isUltReady()           { return ultimatePoints > 0 && ultimateProgress >= ultimatePoints; }
         public void    activateUlt()          { if (isUltReady()) { ultimateProgress = 0; currentCharges = 1; } }
+        /** Add one charge (used by admin give). */
+        public void    addCharge()            { currentCharges = Math.min(currentCharges + 1, Math.max(charges, currentCharges + 1)); }
 
         /** Start a cooldown (milliseconds). canUse() returns false while active. */
         public void    setCooldown(long ms)   { cooldownEnd = System.currentTimeMillis() + ms; }
@@ -79,6 +81,12 @@ public abstract class Agent {
         abilityE.resetCharges();
         abilityC.resetCharges();
         // X is NOT reset — charges accumulate across rounds
+    }
+
+    /** Fill ultimate to max (admin give) */
+    public void fillUlt() {
+        if (abilityX.ultimatePoints > 0)
+            while (!abilityX.isUltReady()) abilityX.addUltPoint();
     }
 
     /** Called when this agent kills someone */

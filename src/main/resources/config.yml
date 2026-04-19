@@ -86,6 +86,10 @@ economy:
   # Set to true to give all skins for free (no VP cost) — useful for test servers
   free-skins: true
 
+# Lobby spawn — where kicked players are teleported (/valorant kick)
+# Format: worldName,x,y,z   — set automatically with /valorant setlobby
+# lobby-spawn: "world,0,64,0"
+
 # Permissions
 # valorantmc.admin  — admin commands (/valorant forcestart, kick, pause, etc.)
 # valorantmc.play   — join games, use /valorant join

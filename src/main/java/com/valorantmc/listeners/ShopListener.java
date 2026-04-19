@@ -80,6 +80,23 @@ public class ShopListener implements Listener {
             // Ability purchase
             Character abilityKey = ShopGUI.getAbilityKeyFromShopItem(clicked);
             if (abilityKey != null) {
+                // Double-buy prevention: check before delegating to ShopManager
+                com.valorantmc.agents.Agent agent = game.getAgent(player);
+                if (agent != null) {
+                    com.valorantmc.agents.Agent.Ability ability = switch (abilityKey) {
+                        case 'C' -> agent.getAbilityC();
+                        case 'Q' -> agent.getAbilityQ();
+                        case 'E' -> agent.getAbilityE();
+                        default  -> null;
+                    };
+                    if (ability != null && ability.cost > 0
+                            && ability.getCurrentCharges() >= ability.charges) {
+                        player.sendMessage(ValorantMC.colorize(
+                                "&c&lShop &r&cYou already have max charges for this ability!"));
+                        player.openInventory(ShopGUI.build(player));
+                        return;
+                    }
+                }
                 plugin.getShopManager().buyAbility(player, abilityKey, game);
                 player.openInventory(ShopGUI.build(player));
             }
@@ -98,6 +115,7 @@ public class ShopListener implements Listener {
                 return;
             }
 
+            if (!clicked.hasItemMeta()) return;
             String name = clicked.getItemMeta().getDisplayName();
             String stripped = org.bukkit.ChatColor.stripColor(name);
             // Find skin by display name
@@ -117,6 +135,7 @@ public class ShopListener implements Listener {
                         return;
                     }
                     org.bukkit.inventory.meta.ItemMeta meta = held.getItemMeta();
+                    if (meta == null) return;
                     meta.setCustomModelData(skin.customModelId());
                     held.setItemMeta(meta);
                     player.sendMessage(ValorantMC.colorize("&aEquipped &f" + skin.displayName()));

@@ -196,6 +196,7 @@ public class MapSetupCommand implements CommandExecutor {
     private void giveWand(Player p) {
         ItemStack wand = new ItemStack(Material.GOLDEN_HOE);
         ItemMeta m = wand.getItemMeta();
+        if (m == null) { p.sendMessage(ValorantMC.colorize("&cFailed to create map wand.")); return; }
         m.setDisplayName(ValorantMC.colorize("&6Map Wand"));
         m.setLore(List.of(
                 ValorantMC.colorize("&7Right-click a block to mark it"),

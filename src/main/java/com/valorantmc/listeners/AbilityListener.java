@@ -161,12 +161,18 @@ public class AbilityListener implements Listener {
                     spike.finishPlant(player);
                     plantTasks.remove(player.getUniqueId());
                     game.announceSpikePlanted(player.getLocation());
-                    ItemStack main = player.getInventory().getItemInMainHand();
-                    if (main != null && plugin.getAbilityManager().isSpikeItem(main)) {
-                        player.getInventory().remove(main.getType());
-                    } else {
-                        // Fallback: remove any red-dye spike item
-                        player.getInventory().remove(org.bukkit.Material.RED_DYE);
+                    // Remove only the spike item by NBT tag — don't wipe all items of that material
+                    org.bukkit.NamespacedKey spikeKey =
+                            new org.bukkit.NamespacedKey(plugin, "spike");
+                    for (int _i = 0; _i < player.getInventory().getSize(); _i++) {
+                        ItemStack _it = player.getInventory().getItem(_i);
+                        if (_it == null || !_it.hasItemMeta()) continue;
+                        Boolean _isSpike = _it.getItemMeta().getPersistentDataContainer()
+                                .get(spikeKey, org.bukkit.persistence.PersistentDataType.BOOLEAN);
+                        if (Boolean.TRUE.equals(_isSpike)) {
+                            player.getInventory().setItem(_i, null);
+                            break;
+                        }
                     }
                     cancel();
                 }

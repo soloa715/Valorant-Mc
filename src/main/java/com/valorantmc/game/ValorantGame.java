@@ -471,7 +471,8 @@ public class ValorantGame {
         playerHealth.putIfAbsent(target.getUniqueId(), 100);
         playerShield.putIfAbsent(target.getUniqueId(), 0);
 
-        double multiplier = isHeadshot ? 2.5 : isLegshot ? 0.85 : 1.0;
+        double hsMultiplier = plugin.getConfig().getDouble("weapons.headshot-multiplier", 2.5);
+        double multiplier = isHeadshot ? hsMultiplier : isLegshot ? 0.85 : 1.0;
         int finalDamage = (int) Math.ceil(rawDamage * multiplier);
 
         // Shield absorbs first
@@ -833,6 +834,14 @@ public class ValorantGame {
 
     private boolean paused = false;
 
+    /** Admin: instantly end the buy phase and start combat */
+    public void adminSkipBuyPhase() {
+        if (state != GameState.BUY_PHASE) return;
+        if (buyPhaseTask != null) { buyPhaseTask.cancel(); buyPhaseTask = null; }
+        getAllPlayers().forEach(Player::closeInventory);
+        startRound();
+    }
+
     public void pause() {
         if (paused) return;
         paused = true;
@@ -917,6 +926,18 @@ public class ValorantGame {
     public Weapon getWeapon(Player p) { return playerWeapons.get(p.getUniqueId()); }
     public void   setWeapon(Player p, Weapon w) { playerWeapons.put(p.getUniqueId(), w); }
 
-    public List<Location> getSiteALocations() { return siteALocations; }
-    public List<Location> getSiteBLocations() { return siteBLocations; }
+    public List<Location> getSiteALocations()      { return siteALocations; }
+    public List<Location> getSiteBLocations()      { return siteBLocations; }
+    public List<Location> getAttackSpawnsPublic()  { return attackSpawns;   }
+    public List<Location> getDefendSpawnsPublic()  { return defendSpawns;   }
+
+    /** Add a spawn point at runtime (used by admin map setup GUI) */
+    public void addAttackSpawn(Location loc)  { attackSpawns.add(loc); }
+    public void addDefendSpawn(Location loc)  { defendSpawns.add(loc); }
+    public void addSiteA(Location loc)        { siteALocations.add(loc); }
+    public void addSiteB(Location loc)        { siteBLocations.add(loc); }
+    public void clearMapPoints() {
+        attackSpawns.clear(); defendSpawns.clear();
+        siteALocations.clear(); siteBLocations.clear();
+    }
 }

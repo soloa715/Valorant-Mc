@@ -90,6 +90,9 @@ public class EconomyManager {
         for (Map.Entry<UUID, Integer> e : vpBalance.entrySet()) {
             cfg.set("vp." + e.getKey().toString(), e.getValue());
         }
+        for (Map.Entry<UUID, Integer> e : credits.entrySet()) {
+            cfg.set("credits." + e.getKey().toString(), e.getValue());
+        }
         try { cfg.save(dataFile); }
         catch (java.io.IOException ex) {
             plugin.getLogger().warning("Failed to save economy.yml: " + ex.getMessage());
@@ -105,6 +108,14 @@ public class EconomyManager {
             for (String key : vpSec.getKeys(false)) {
                 try {
                     vpBalance.put(UUID.fromString(key), vpSec.getInt(key));
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        org.bukkit.configuration.ConfigurationSection creditsSec = cfg.getConfigurationSection("credits");
+        if (creditsSec != null) {
+            for (String key : creditsSec.getKeys(false)) {
+                try {
+                    credits.put(UUID.fromString(key), creditsSec.getInt(key));
                 } catch (IllegalArgumentException ignored) {}
             }
         }

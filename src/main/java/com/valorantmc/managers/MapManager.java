@@ -267,10 +267,15 @@ public class MapManager {
 
         ValorantMap map = new ValorantMap(name, displayName);
 
+        // Support both underscore keys (canonical) and hyphen keys (legacy/user YAMLs)
         loadLocations(cfg, "attack_spawns", world, map.getAttackSpawns());
+        if (map.getAttackSpawns().isEmpty()) loadLocations(cfg, "attack-spawns", world, map.getAttackSpawns());
         loadLocations(cfg, "defend_spawns", world, map.getDefendSpawns());
-        loadLocations(cfg, "site_a",        world, map.getSiteA());
-        loadLocations(cfg, "site_b",        world, map.getSiteB());
+        if (map.getDefendSpawns().isEmpty()) loadLocations(cfg, "defend-spawns", world, map.getDefendSpawns());
+        loadLocations(cfg, "site_a", world, map.getSiteA());
+        if (map.getSiteA().isEmpty()) loadLocations(cfg, "site-a", world, map.getSiteA());
+        loadLocations(cfg, "site_b", world, map.getSiteB());
+        if (map.getSiteB().isEmpty()) loadLocations(cfg, "site-b", world, map.getSiteB());
 
         maps.put(name.toLowerCase(), map);
         plugin.getLogger().info("Loaded map: " + displayName);
@@ -384,6 +389,9 @@ public class MapManager {
 
     /** Public entry point so MapSetupCommand can hot-reload maps after saving. */
     public void reloadMaps() {
+        // Remove only maps that were loaded from YAML disk files (non-auto-generated).
+        // Auto-generated / procedural maps stay in memory.
+        maps.entrySet().removeIf(e -> !e.getValue().isAutoGenerate());
         loadMapsFromDisk();
     }
 

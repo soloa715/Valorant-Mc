@@ -77,7 +77,12 @@ public class WeaponListener implements Listener {
             plugin.getWeaponManager().setHeldWeapon(player, weapon);
         }
 
-        if (!plugin.getWeaponManager().tryShoot(player, weapon)) return;
+        if (!plugin.getWeaponManager().tryShoot(player, weapon)) {
+            if (weapon.getCurrentAmmo() == 0 && !weapon.getType().isMelee()) {
+                player.playSound(player.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.6f, 2.0f);
+            }
+            return;
+        }
 
         // ── Fire! ─────────────────────────────────────────────────────────────
         fireWeapon(player, weapon, game);
@@ -159,17 +164,17 @@ public class WeaponListener implements Listener {
                         (random.nextDouble() - 0.5) * 2 * spread,
                         (random.nextDouble() - 0.5) * 2 * spread)).normalize();
             }
-            // Camera kick (recoil) — push pitch up slightly
+            // Camera kick (recoil) — rotate pitch upward without teleporting
             if (enableRecoil && weapon.getType().getRecoilPerShot() > 0) {
-                float kickAmount = weapon.getType().getRecoilPerShot() * 8f;
-                Location look = player.getLocation();
-                look.setPitch(Math.max(-89f, look.getPitch() - kickAmount));
-                player.teleport(look);
+                float kick = weapon.getType().getRecoilPerShot() * 7f;
+                float newPitch = Math.max(-89f, player.getLocation().getPitch() - kick);
+                player.setRotation(player.getLocation().getYaw(), newPitch);
             }
         }
 
+        double range = type.getMaxRange();
         RayTraceResult result = player.getWorld().rayTrace(
-                player.getEyeLocation(), dir, 100,
+                player.getEyeLocation(), dir, range,
                 FluidCollisionMode.NEVER, true, 0.2,
                 e -> e instanceof Player && !e.equals(player));
 
@@ -338,29 +343,16 @@ public class WeaponListener implements Listener {
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private boolean isHeadshotHit(Player shooter, Player target, RayTraceResult result) {
-        double eyeY    = target.getEyeLocation().getY();
-        double hitY    = result.getHitPosition().getY();
-        return hitY >= eyeY - 0.1;
+        // Head hitbox: from eye level - 0.1 up to eye level + 0.25
+        double eyeY = target.getEyeLocation().getY();
+        double hitY = result.getHitPosition().getY();
+        return hitY >= eyeY - 0.1 && hitY <= eyeY + 0.25;
     }
 
     private boolean isLegshotHit(Player shooter, Player target, RayTraceResult result) {
         double feet = target.getLocation().getY();
         double hitY = result.getHitPosition().getY();
         return hitY <= feet + 0.6;
-    }
-
-    private double getSpread(WeaponType type, Player player) {
-        if (!plugin.getConfig().getBoolean("weapons.bullet-spread", true)) return 0;
-        boolean isMoving = player.getVelocity().lengthSquared() > 0.01;
-        return switch (type.getCategory()) {
-            case SIDEARM  -> isMoving ? 0.08 : 0.03;
-            case SMG      -> isMoving ? 0.10 : 0.04;
-            case SHOTGUN  -> 0.20;
-            case RIFLE    -> isMoving ? 0.12 : 0.02;
-            case SNIPER   -> isMoving ? 0.30 : 0.005;
-            case HEAVY    -> isMoving ? 0.12 : 0.05;
-            case MELEE    -> 0;
-        };
     }
 
     private Sound getGunSound(WeaponType type) {

@@ -88,26 +88,62 @@ public class WeaponManager {
         UUID uuid = p.getUniqueId();
         long now = System.currentTimeMillis();
 
+        if (weapon.getType().isMelee()) return false; // melee can't reload
         if (reloadEnd.containsKey(uuid) && now < reloadEnd.get(uuid)) return false;
         if (weapon.isReloading()) return false;
-        if (weapon.getCurrentAmmo() >= weapon.getType().getMagazineSize()) return false; // mag already full
-        if (weapon.getReserveAmmo() <= 0) return false; // nothing to reload from
+        if (weapon.getCurrentAmmo() >= weapon.getType().getMagazineSize()) {
+            p.sendActionBar(net.kyori.adventure.text.Component.text("§eAmmo is full!"));
+            return false;
+        }
+        if (weapon.getReserveAmmo() <= 0) {
+            p.sendActionBar(net.kyori.adventure.text.Component.text("§cNo reserve ammo!"));
+            return false;
+        }
 
-        long reloadMs = (long) (weapon.getType().getReloadTime() * 1000);
+        long reloadMs   = (long) (weapon.getType().getReloadTime() * 1000);
+        long reloadTicks = weapon.getType().getReloadTicks();
         reloadEnd.put(uuid, now + reloadMs);
         weapon.setReloading(true);
 
-        p.sendMessage(plugin.msg("weapons.reloading"));
+        // Reload sound
+        p.playSound(p.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_LOADING_MIDDLE, 0.8f, 1.5f);
+        p.sendActionBar(net.kyori.adventure.text.Component.text(
+                "§6Reloading §f" + weapon.getType().getDisplayName() + "§8..."));
+
+        // Action bar countdown while reloading
+        final long endTime = now + reloadMs;
+        final int totalTicks = (int) reloadTicks;
+        plugin.getServer().getScheduler().runTaskTimer(plugin, task -> {
+            if (!p.isOnline() || !weapon.isReloading()) { task.cancel(); return; }
+            long remaining = endTime - System.currentTimeMillis();
+            if (remaining <= 0) { task.cancel(); return; }
+            float pct = (float) remaining / reloadMs;
+            int filled = (int)((1f - pct) * 10);
+            String bar = "§a" + "█".repeat(filled) + "§8" + "█".repeat(10 - filled);
+            p.sendActionBar(net.kyori.adventure.text.Component.text(
+                    "§6Reloading §f" + weapon.getType().getDisplayName() + " " + bar));
+        }, 4L, 4L);
 
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!p.isOnline()) return;
+            // Validate this weapon is still the one being reloaded (player didn't switch)
+            Weapon current = heldWeapons.get(p.getUniqueId());
+            if (current != weapon) {
+                weapon.setReloading(false);
+                return;
+            }
             if (weapon.isReloading()) {
                 weapon.reload();
                 weapon.setReloading(false);
+                reloadEnd.remove(uuid);
                 updateHeldItem(p, weapon);
-                p.sendMessage(plugin.msg("weapons.reload-done"));
+                // Reload-complete sound + action bar
+                p.playSound(p.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_LOADING_END, 0.9f, 1.6f);
+                p.sendActionBar(net.kyori.adventure.text.Component.text(
+                        "§aReloaded! §f" + weapon.getCurrentAmmo() + "/"
+                        + weapon.getType().getMagazineSize()));
             }
-        }, weapon.getType().getReloadTicks());
+        }, reloadTicks);
 
         return true;
     }
