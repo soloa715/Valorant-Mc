@@ -1,9 +1,0 @@
-{
-  "name": "valorant.gun.marshal.name",
-  "display": "valorant:marshal_display",
-  "data": "valorant:marshal_data",
-  "tooltip": "valorant.gun.marshal.desc",
-  "type": "sniper",
-  "item_type": "modern_kinetic",
-  "sort": 1
-}

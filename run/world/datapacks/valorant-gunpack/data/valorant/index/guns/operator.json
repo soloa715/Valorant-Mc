@@ -1,9 +1,0 @@
-{
-  "name": "valorant.gun.operator.name",
-  "display": "valorant:operator_display",
-  "data": "valorant:operator_data",
-  "tooltip": "valorant.gun.operator.desc",
-  "type": "sniper",
-  "item_type": "modern_kinetic",
-  "sort": 2
-}

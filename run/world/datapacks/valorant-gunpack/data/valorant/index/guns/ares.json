@@ -1,9 +1,0 @@
-{
-  "name": "valorant.gun.ares.name",
-  "display": "valorant:ares_display",
-  "data": "valorant:ares_data",
-  "tooltip": "valorant.gun.ares.desc",
-  "type": "mg",
-  "item_type": "modern_kinetic",
-  "sort": 1
-}

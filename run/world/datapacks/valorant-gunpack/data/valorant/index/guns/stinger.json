@@ -1,9 +1,0 @@
-{
-  "name": "valorant.gun.stinger.name",
-  "display": "valorant:stinger_display",
-  "data": "valorant:stinger_data",
-  "tooltip": "valorant.gun.stinger.desc",
-  "type": "smg",
-  "item_type": "modern_kinetic",
-  "sort": 1
-}

@@ -1,9 +1,0 @@
-{
-  "name": "valorant.gun.knife.name",
-  "display": "valorant:knife_display",
-  "data": "valorant:knife_data",
-  "tooltip": "valorant.gun.knife.desc",
-  "type": "pistol",
-  "item_type": "modern_kinetic",
-  "sort": 9
-}

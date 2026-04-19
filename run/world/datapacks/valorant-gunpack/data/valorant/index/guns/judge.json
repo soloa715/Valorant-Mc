@@ -1,9 +1,0 @@
-{
-  "name": "valorant.gun.judge.name",
-  "display": "valorant:judge_display",
-  "data": "valorant:judge_data",
-  "tooltip": "valorant.gun.judge.desc",
-  "type": "shotgun",
-  "item_type": "modern_kinetic",
-  "sort": 2
-}

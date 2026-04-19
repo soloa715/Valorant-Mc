@@ -1,9 +1,0 @@
-{
-  "name": "valorant.gun.guardian.name",
-  "display": "valorant:guardian_display",
-  "data": "valorant:guardian_data",
-  "tooltip": "valorant.gun.guardian.desc",
-  "type": "rifle",
-  "item_type": "modern_kinetic",
-  "sort": 2
-}

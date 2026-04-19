@@ -1,7 +1,0 @@
-{
-  "name": "crystals.attachment.crystal_mag.name",
-  "data": "crystals:crystal_mag_data",
-  "display": "crystals:crystal_mag_display",
-  "type": "extended_mag",
-  "sort": 1
-}

@@ -1,9 +1,0 @@
-{
-  "name": "valorant.gun.bucky.name",
-  "display": "valorant:bucky_display",
-  "data": "valorant:bucky_data",
-  "tooltip": "valorant.gun.bucky.desc",
-  "type": "shotgun",
-  "item_type": "modern_kinetic",
-  "sort": 1
-}

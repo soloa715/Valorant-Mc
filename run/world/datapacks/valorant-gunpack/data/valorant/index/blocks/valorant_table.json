@@ -1,8 +1,0 @@
-{
-  "name": "valorant.block.table.name",
-  "display": "valorant:valorant_table_display",
-  "data": "valorant:valorant_table_data",
-  "tooltip": "valorant.block.table.desc",
-  "id": "tacz:workbench_b",
-  "sort": 1
-}
