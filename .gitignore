@@ -65,6 +65,15 @@ run/plugins/ValorantMC-*.jar
 modding/dist/
 modding/tacz-extract/
 
+# Paper remapped JARs cache (generated on startup by Paper's remapper)
+run/plugins/.paper-remapped/
+
+# Console history
+run/.console_history
+
+# Third-party plugins that aren't part of this project
+run/plugins/multiverse-core-*.jar
+
 # ── Misc ─────────────────────────────────────────────────────────────────────
 *.log
 *.tmp
