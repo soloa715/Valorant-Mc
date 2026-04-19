@@ -1,14 +1,35 @@
 name: ascent
-display-name: Ascent
-world: valmap_ascent
-auto-generate: false
+display-name: "Ascent"
+world: world
+
+# Attacker spawns — north edge of arena (z = -27), evenly spaced
 attack_spawns:
-- -371,-11,-122,-89,11
-- -372,-11,-125,-93,5
+  - "0,65,-27,180,0"
+  - "-6,65,-27,180,0"
+  - "6,65,-27,180,0"
+  - "-12,65,-27,175,0"
+  - "12,65,-27,185,0"
+
+# Defender spawns — south edge of arena (z = +27), facing north
 defend_spawns:
-- -256,-11,-105,92,9
-- -252,-11,-105,91,6
+  - "0,65,27,0,0"
+  - "-6,65,27,0,0"
+  - "6,65,27,0,0"
+  - "-12,65,27,5,0"
+  - "12,65,27,-5,0"
+
+# Site A — west platform at x=-15
 site_a:
-- -291,-9,-64
+  - "-15,65,0"
+  - "-15,65,1"
+  - "-15,65,-1"
+  - "-16,65,0"
+  - "-14,65,0"
+
+# Site B — east platform at x=+15
 site_b:
-- -284,-15,-157
+  - "15,65,0"
+  - "15,65,1"
+  - "15,65,-1"
+  - "16,65,0"
+  - "14,65,0"

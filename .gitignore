@@ -1,0 +1,72 @@
+# ── Maven build output ────────────────────────────────────────────────────────
+target/
+
+# ── IntelliJ IDEA ─────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ── Eclipse ───────────────────────────────────────────────────────────────────
+.classpath
+.project
+.settings/
+bin/
+
+# ── VS Code ───────────────────────────────────────────────────────────────────
+.vscode/
+
+# ── OS junk ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Minecraft server runtime (run/) ──────────────────────────────────────────
+# Server JARs (re-downloaded by run-server.bat)
+run/*.jar
+
+# Generated world data
+run/world/
+run/world_nether/
+run/world_the_end/
+run/valmap_*/
+
+# Server logs and crash reports
+run/logs/
+run/crash-reports/
+
+# Paper/Spigot cache and libraries (auto-downloaded on startup)
+run/cache/
+run/libraries/
+run/versions/
+
+# Server data files (auto-generated, server-specific)
+run/banned-ips.json
+run/banned-players.json
+run/ops.json
+run/whitelist.json
+run/usercache.json
+run/version_history.json
+run/session.lock
+
+# Plugin data (runtime state, not source)
+run/plugins/bStats/
+run/plugins/spark/
+run/plugins/Multiverse-Core/
+run/plugins/ValorantMC/
+# Keep the built plugin JAR so you can drop it in and test without a full build
+!run/plugins/ValorantMC.jar
+
+# Built plugin copies inside plugins/ folder (re-copied from target/ on build)
+run/plugins/ValorantMC-*.jar
+
+# ── Modding / asset build output ─────────────────────────────────────────────
+modding/dist/
+modding/tacz-extract/
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+*.swp
