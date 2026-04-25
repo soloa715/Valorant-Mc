@@ -57,12 +57,17 @@ public class Reyna extends Agent {
     @Override
     public void useQ(Player player, ValorantGame game) {
         if (soulOrbs <= 0) { player.sendMessage(ValorantMC.colorize("&cNo soul orbs! Get a kill first.")); return; }
+
+        int current = game.getHealth(player);
+        if (current >= 100) {
+            player.sendMessage(ValorantMC.colorize("&c[Reyna] &fAlready at full HP — soul orb conserved."));
+            return;
+        }
         soulOrbs--;
 
-        // Devour: heal up to 100 HP (game.heal caps at 100, updates both maps)
-        int current = game.getHealth(player);
-        int healed  = Math.min(100, 100 - current);
-        if (healed > 0) game.heal(player, healed);
+        // Devour: heal up to 100 HP (game.heal caps at 100)
+        int healed = 100 - current;
+        game.heal(player, healed);
         player.sendMessage(ValorantMC.colorize("&c[Reyna] &fDevoured! +" + healed + "hp"));
         player.getWorld().spawnParticle(Particle.HEART, player.getLocation().add(0, 1, 0), 10, 0.5, 0.5, 0.5, 0.1);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);

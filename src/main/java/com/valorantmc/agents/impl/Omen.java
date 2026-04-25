@@ -33,8 +33,12 @@ public class Omen extends Agent {
         if (!abilityC.canUse()) { player.sendMessage(ValorantMC.colorize("&5No Shrouded Step charges!")); return; }
         abilityC.consume();
 
-        Location dest = safeTarget(player, 8).add(0.5, 1, 0.5);
-        if (dest.getBlock().getType() != Material.AIR) { player.sendMessage(ValorantMC.colorize("&cBlocked!")); return; }
+        Location dest = safeTarget(player, 8).add(0.5, 0, 0.5);
+        // Require 2-block standing clearance: both foot block and head block must be passable
+        if (dest.getBlock().getType().isSolid() || dest.clone().add(0, 1, 0).getBlock().getType().isSolid()) {
+            player.sendMessage(ValorantMC.colorize("&cBlocked! Cannot teleport into a solid block."));
+            return;
+        }
 
         player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation(), 30, 0.3, 1, 0.3, 0.2);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.7f);
@@ -106,7 +110,14 @@ public class Omen extends Agent {
         abilityX.activateUlt();
 
         // Teleport to where they're looking (long range)
-        Location dest = safeTarget(player, 64).add(0.5, 1, 0.5);
+        Location dest = safeTarget(player, 64).add(0.5, 0, 0.5);
+        // Abort if destination is inside solid blocks
+        if (dest.getBlock().getType().isSolid() || dest.clone().add(0, 1, 0).getBlock().getType().isSolid()) {
+            player.sendMessage(ValorantMC.colorize("&cFrom the Shadows blocked! Target location is inside a wall."));
+            // Refund the ult
+            abilityX.addUltPoint();
+            return;
+        }
         game.broadcast(ValorantMC.colorize("&5An Omen is teleporting somewhere!"));
 
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 60, 0, false, false));

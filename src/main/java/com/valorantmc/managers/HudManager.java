@@ -114,13 +114,17 @@ public class HudManager {
         if (a == null) return "";
         StringBuilder sb = new StringBuilder("  ").append(color).append("[").append(key).append(" ");
         if (a.isOnCooldown()) {
-            // Show remaining cooldown instead of dots
             sb.append(String.format("&f%.1fs", a.getCooldownSeconds()));
         } else {
-            int total   = Math.max(1, a.charges);
+            int total   = a.charges;  // 0 for soul-orb abilities like Reyna Q/E
             int current = a.getCurrentCharges();
-            for (int i = 0; i < total; i++) {
-                sb.append(i < current ? "●" : "&8○").append(color);
+            if (total <= 0) {
+                // 0-charge ability (charges granted externally, e.g. Reyna soul orbs)
+                sb.append(current > 0 ? "●" : "&8—");
+            } else {
+                for (int i = 0; i < total; i++) {
+                    sb.append(i < current ? "●" : "&8○").append(color);
+                }
             }
         }
         sb.append("&r").append(color).append("]");

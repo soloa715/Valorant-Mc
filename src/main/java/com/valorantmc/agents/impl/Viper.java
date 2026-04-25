@@ -20,7 +20,14 @@ import org.bukkit.scheduler.BukkitRunnable;
  */
 public class Viper extends Agent {
 
+    /**
+     * Viper's fuel tank. Starts full (true). Q and E abilities drain it while
+     * active; it refills when both are inactive. Toggled off by the round timer
+     * when both deployed abilities are running simultaneously, mirroring the
+     * real game mechanic where Viper must choose between two active abilities.
+     */
     private boolean fuelActive = true;
+    private int deployedAbilityCount = 0;
 
     public Viper() {
         super("viper", "Viper", AgentRole.CONTROLLER);
@@ -67,10 +74,25 @@ public class Viper extends Agent {
         Location loc = safeTarget(player, 12).add(0.5, 1, 0.5);
         player.getWorld().playSound(loc, Sound.BLOCK_SLIME_BLOCK_PLACE, 1f, 0.5f);
 
+        deployedAbilityCount++;
+        updateFuel(player);
+
         new BukkitRunnable() {
             int ticks = 0;
             @Override public void run() {
-                if (!fuelActive || ticks >= 300) { cancel(); return; }
+                if (ticks >= 300) {
+                    deployedAbilityCount = Math.max(0, deployedAbilityCount - 1);
+                    updateFuel(player);
+                    cancel();
+                    return;
+                }
+                if (!fuelActive) {
+                    // Out of fuel — cloud collapses, but doesn't cost a charge again
+                    player.sendMessage(ValorantMC.colorize("&a[Viper] &cPoison Cloud deactivated — out of fuel!"));
+                    deployedAbilityCount = Math.max(0, deployedAbilityCount - 1);
+                    cancel();
+                    return;
+                }
                 loc.getWorld().spawnParticle(Particle.DRIPPING_WATER, loc, 20, 1.5, 1.5, 1.5, 0.01);
                 for (Player p : loc.getWorld().getPlayers()) {
                     if (p.getLocation().distance(loc) > 2.5) continue;
@@ -98,10 +120,24 @@ public class Viper extends Agent {
 
         player.sendMessage(ValorantMC.colorize("&a[Viper] &fToxic Screen deployed!"));
 
+        deployedAbilityCount++;
+        updateFuel(player);
+
         new BukkitRunnable() {
             int ticks = 0;
             @Override public void run() {
-                if (!fuelActive || ticks >= 300) { cancel(); return; }
+                if (ticks >= 300) {
+                    deployedAbilityCount = Math.max(0, deployedAbilityCount - 1);
+                    updateFuel(player);
+                    cancel();
+                    return;
+                }
+                if (!fuelActive) {
+                    player.sendMessage(ValorantMC.colorize("&a[Viper] &cToxic Screen deactivated — out of fuel!"));
+                    deployedAbilityCount = Math.max(0, deployedAbilityCount - 1);
+                    cancel();
+                    return;
+                }
                 for (int i = -6; i <= 6; i++) {
                     for (int y = 0; y < 4; y++) {
                         Location pos = start.clone().add(right.clone().multiply(i)).add(0, y, 0);
@@ -112,7 +148,6 @@ public class Viper extends Agent {
                 for (Player p : start.getWorld().getPlayers()) {
                     if (game.getTeam(p) == null) continue;
                     if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
-                    // Check proximity to wall (simplified)
                     for (int i = -6; i <= 6; i++) {
                         Location pos = start.clone().add(right.clone().multiply(i));
                         if (p.getLocation().distance(pos) <= 1) {
@@ -124,6 +159,28 @@ public class Viper extends Agent {
                 ticks += 5;
             }
         }.runTaskTimer(ValorantMC.getInstance(), 0L, 5L);
+    }
+
+    /**
+     * Recalculates fuel state. Fuel runs out when two or more abilities are
+     * active simultaneously; it refills when fewer than two are active.
+     * When fuel runs out, active Q/E abilities will collapse on their next tick.
+     */
+    private void updateFuel(Player player) {
+        boolean hadFuel = fuelActive;
+        fuelActive = deployedAbilityCount < 2;
+        if (hadFuel && !fuelActive && player.isOnline()) {
+            player.sendMessage(ValorantMC.colorize("&a[Viper] &cOut of fuel! One ability must deactivate."));
+        } else if (!hadFuel && fuelActive && player.isOnline()) {
+            player.sendMessage(ValorantMC.colorize("&a[Viper] &aFuel restored."));
+        }
+    }
+
+    @Override
+    public void onRoundStart(Player player) {
+        super.onRoundStart(player);
+        fuelActive = true;
+        deployedAbilityCount = 0;
     }
 
     /** X – Viper's Pit: large personal domain of poison */

@@ -78,7 +78,7 @@ public class Breach extends Agent {
     /** E – Fault Line: seismic wave that concusses enemies in its path */
     @Override
     public void useE(Player player, ValorantGame game) {
-        if (!abilityE.canUse()) { player.sendMessage(ValorantMC.colorize("&6Fault Line used!")); return; }
+        if (!abilityE.canUse()) { player.sendMessage(ValorantMC.colorize("&6Fault Line already used! Recharges next round.")); return; }
         abilityE.consume();
 
         org.bukkit.util.Vector dir = player.getLocation().getDirection().setY(0).normalize();

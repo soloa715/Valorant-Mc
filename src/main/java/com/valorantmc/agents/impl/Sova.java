@@ -113,7 +113,7 @@ public class Sova extends Agent {
 
         player.getWorld().playSound(pos, Sound.ENTITY_ARROW_SHOOT, 2f, 0.5f);
 
-        for (int i = 0; i < 60; i++) {
+        for (int i = 0; i < 150; i++) {
             pos = pos.add(dir);
             Location finalPos = pos.clone();
             player.getWorld().spawnParticle(Particle.CRIT, finalPos, 3, 0.1, 0.1, 0.1, 0);

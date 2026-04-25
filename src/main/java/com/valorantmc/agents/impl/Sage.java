@@ -123,8 +123,8 @@ public class Sage extends Agent {
     public void useX(Player player, ValorantGame game) {
         if (!abilityX.isUltReady()) { player.sendMessage(ValorantMC.colorize("&cResurrection not ready!")); return; }
 
-        // Find nearest dead teammate within 5 blocks
-        Player deadAlly = findNearestDeadAlly(player, game, 5);
+        // Find nearest dead teammate — no range restriction (unlimited in real Valorant)
+        Player deadAlly = findNearestDeadAlly(player, game, Double.MAX_VALUE);
         if (deadAlly == null) {
             player.sendMessage(ValorantMC.colorize("&cNo dead ally nearby to resurrect!"));
             return;
