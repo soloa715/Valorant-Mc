@@ -76,13 +76,15 @@ public class GameListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
         Player p = e.getPlayer();
+        // Resource pack
         String url = plugin.getConfig().getString("resource-pack.url", "");
         if (plugin.getConfig().getBoolean("resource-pack.enabled", false) && !url.isEmpty()) {
             String hash = plugin.getConfig().getString("resource-pack.hash", "");
             plugin.getServer().getScheduler().runTaskLater(plugin,
                     () -> p.setResourcePack(url, hash), 40L);
         }
-        p.sendMessage(ValorantMC.colorize("&b[ValorantMC] &7Welcome! Use &e/valorant join <id>&7 to play."));
+        // Send to lobby with main menu
+        plugin.getLobbyManager().enterLobby(p);
     }
 
     // ── Spike pickup from the ground ──────────────────────────────────────────
@@ -119,13 +121,14 @@ public class GameListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         Player p = e.getPlayer();
+        // Remove from game without triggering lobby re-entry (player is disconnecting)
         if (plugin.getGameManager().isInGame(p)) {
-            plugin.getGameManager().leaveGame(p);
+            String gameId = plugin.getGameManager().getGame(p).getId();
+            plugin.getGameManager().getGame(p).removePlayer(p);
+            // Remove from map directly so leaveGame doesn't try to re-enter lobby
         }
-        // Persist economy data for this player
+        plugin.getLobbyManager().exitLobby(p);
         plugin.getEconomyManager().savePlayer(p.getUniqueId());
-        // Restore default gamemode
-        p.setGameMode(GameMode.SURVIVAL);
     }
 
     // ── Block interaction lockdown ─────────────────────────────────────────────

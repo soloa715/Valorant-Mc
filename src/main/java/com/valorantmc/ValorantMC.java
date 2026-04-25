@@ -24,6 +24,7 @@ public final class ValorantMC extends JavaPlugin {
     private MapManager mapManager;
     private StatsManager statsManager;
     private HudManager hudManager;
+    private LobbyManager lobbyManager;
     private com.valorantmc.listeners.AbilityListener abilityListener;
 
     private FileConfiguration messages;
@@ -40,6 +41,7 @@ public final class ValorantMC extends JavaPlugin {
         messages = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
 
         // Initialize managers in dependency order
+        lobbyManager   = new LobbyManager(this);
         weaponManager  = new WeaponManager(this);
         skinManager    = new SkinManager(this);
         economyManager = new EconomyManager(this);
@@ -124,6 +126,7 @@ public final class ValorantMC extends JavaPlugin {
     public MapManager     getMapManager()     { return mapManager;     }
     public StatsManager   getStatsManager()   { return statsManager;   }
     public HudManager     getHudManager()     { return hudManager;     }
+    public LobbyManager   getLobbyManager()   { return lobbyManager;   }
     public com.valorantmc.listeners.AbilityListener getAbilityListener() { return abilityListener; }
 
     public FileConfiguration getMessages() { return messages; }

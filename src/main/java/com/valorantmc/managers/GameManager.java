@@ -51,6 +51,8 @@ public class GameManager {
         if (gameId == null) return;
         ValorantGame game = games.get(gameId);
         if (game != null) game.removePlayer(p);
+        // Return the player to the lobby after leaving a game
+        if (p.isOnline()) plugin.getLobbyManager().enterLobby(p);
     }
 
     public void removeGame(String id) {

@@ -29,6 +29,58 @@ public class ShopListener implements Listener {
         String title = e.getView().getTitle();
         ItemStack clicked = e.getCurrentItem();
 
+        // ── Main Menu GUI ─────────────────────────────────────────────────────
+        if (title.equals(com.valorantmc.shop.MainMenuGUI.TITLE)) {
+            e.setCancelled(true);
+            if (clicked == null || !clicked.hasItemMeta()) return;
+            String action = clicked.getItemMeta().getPersistentDataContainer()
+                    .get(new NamespacedKey(plugin, "menu_action"), PersistentDataType.STRING);
+            if (action == null) return;
+
+            if (action.startsWith("join:")) {
+                String gameId = action.substring(5);
+                player.closeInventory();
+                plugin.getLobbyManager().exitLobby(player);
+                plugin.getGameManager().joinGame(player, gameId);
+                return;
+            }
+
+            switch (action) {
+                case "quickplay" -> {
+                    player.closeInventory();
+                    plugin.getLobbyManager().exitLobby(player);
+                    plugin.getGameManager().quickPlay(player);
+                }
+                case "custom_game" -> {
+                    player.closeInventory();
+                    player.sendMessage(ValorantMC.colorize(
+                            "&e[ValorantMC] &7Custom game creator coming soon! Use &e/vcustom&7."));
+                }
+                case "skins" -> player.openInventory(
+                        com.valorantmc.shop.SkinGUI.build(player, null));
+                case "agent" -> {
+                    ValorantGame agentGame = plugin.getGameManager().getGame(player);
+                    if (agentGame != null) {
+                        player.openInventory(AgentSelectGUI.build(player));
+                    } else {
+                        player.sendMessage(ValorantMC.colorize(
+                                "&7You can pick your agent once you join a game."));
+                    }
+                }
+                case "stats" -> {
+                    player.closeInventory();
+                    player.performCommand("vstats");
+                }
+                case "settings" -> {
+                    player.closeInventory();
+                    player.sendMessage(ValorantMC.colorize(
+                            "&7Commands: &e/valorant setlobby &7· &e/valorant reload"));
+                }
+                case "close" -> player.closeInventory();
+            }
+            return;
+        }
+
         // ── Lobby GUI ─────────────────────────────────────────────────────────
         if (title.equals(com.valorantmc.shop.LobbyGUI.TITLE)) {
             e.setCancelled(true);

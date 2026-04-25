@@ -143,10 +143,7 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
             case "setlobby" -> {
                 if (!sender.hasPermission("valorantmc.admin")) { sender.sendMessage(noPermMsg); yield true; }
                 if (!(sender instanceof Player sp)) { sender.sendMessage("Must be a player."); yield true; }
-                Location loc = sp.getLocation();
-                String locStr = loc.getWorld().getName() + "," + loc.getX() + "," + loc.getY() + "," + loc.getZ();
-                plugin.getConfig().set("lobby-spawn", locStr);
-                plugin.saveConfig();
+                plugin.getLobbyManager().setLobbySpawn(sp.getLocation());
                 sender.sendMessage(ValorantMC.colorize("&aLobby spawn set to your current location."));
                 yield true;
             }
