@@ -536,7 +536,16 @@ public class ValorantGame {
 
         victim.setHealth(20);
         victim.setGameMode(GameMode.SPECTATOR);
-        victim.setSpectatorTarget(null); // ensure starts free-floating, not locked to an enemy
+        // Lock spectator to a living teammate so they can't free-fly or watch enemies
+        ValorantTeam victimTeam2 = getTeam(victim);
+        if (victimTeam2 != null) {
+            List<Player> aliveTeammates = victimTeam2.getOnlinePlayers().stream()
+                    .filter(tp -> !victimTeam2.isDead(tp) && !tp.getUniqueId().equals(victim.getUniqueId()))
+                    .toList();
+            victim.setSpectatorTarget(aliveTeammates.isEmpty() ? null : aliveTeammates.get(0));
+        } else {
+            victim.setSpectatorTarget(null);
+        }
         // If the victim was carrying the spike, drop it where they died so a teammate can grab it.
         boolean droppedSpike = spike.getCarrierUUID() != null
                 && spike.getCarrierUUID().equals(victim.getUniqueId());

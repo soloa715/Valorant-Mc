@@ -82,6 +82,7 @@ public final class ValorantMC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new com.valorantmc.listeners.AdminListener(this), this);
         abilityListener = new AbilityListener(this);
         getServer().getPluginManager().registerEvents(abilityListener, this);
+        getServer().getPluginManager().registerEvents(new SpectatorListener(this), this);
 
         // Resource pack prompt
         if (getConfig().getBoolean("resource-pack.enabled")) {
