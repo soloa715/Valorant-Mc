@@ -1,9 +1,26 @@
-{
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/golden_hoe"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 5003 }, "model": "valorantmc:item/operator" }
-  ]
+﻿{
+    "parent":  "item/handheld",
+    "textures":  {
+                     "layer0":  "item/golden_hoe"
+                 },
+    "overrides":  [
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  5003
+                                        },
+                          "model":  "valorantmc:item/operator"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  5303
+                                        },
+                          "model":  "valorantmc:item/operator_reaver"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  5403
+                                        },
+                          "model":  "valorantmc:item/operator_elderflame"
+                      }
+                  ]
 }

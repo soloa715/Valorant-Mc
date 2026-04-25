@@ -1,9 +1,26 @@
-{
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/stone_axe"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 2002 }, "model": "valorantmc:item/spectre" }
-  ]
+﻿{
+    "parent":  "item/handheld",
+    "textures":  {
+                     "layer0":  "item/stone_axe"
+                 },
+    "overrides":  [
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  2002
+                                        },
+                          "model":  "valorantmc:item/spectre"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  2302
+                                        },
+                          "model":  "valorantmc:item/spectre_reaver"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  2602
+                                        },
+                          "model":  "valorantmc:item/spectre_ion"
+                      }
+                  ]
 }

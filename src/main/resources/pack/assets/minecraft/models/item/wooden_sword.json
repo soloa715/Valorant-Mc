@@ -1,10 +1,38 @@
-{
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/wooden_sword"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 1001 }, "model": "valorantmc:item/classic" },
-    { "predicate": { "custom_model_data": 7001 }, "model": "valorantmc:item/knife" }
-  ]
+﻿{
+    "parent":  "item/handheld",
+    "textures":  {
+                     "layer0":  "item/wooden_sword"
+                 },
+    "overrides":  [
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  1001
+                                        },
+                          "model":  "valorantmc:item/classic"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  1101
+                                        },
+                          "model":  "valorantmc:item/classic_prime"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  7001
+                                        },
+                          "model":  "valorantmc:item/knife"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  7101
+                                        },
+                          "model":  "valorantmc:item/knife_prime"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  7401
+                                        },
+                          "model":  "valorantmc:item/knife_elderflame"
+                      }
+                  ]
 }

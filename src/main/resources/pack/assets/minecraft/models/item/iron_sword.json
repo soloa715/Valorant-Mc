@@ -1,9 +1,16 @@
 {
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/iron_sword"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 1004 }, "model": "valorantmc:item/ghost" }
-  ]
+    "parent": "item/handheld",
+    "textures": {
+        "layer0": "item/iron_sword"
+    },
+    "overrides": [
+        {
+            "predicate": { "custom_model_data": 1004 },
+            "model": "valorantmc:item/ghost"
+        },
+        {
+            "predicate": { "custom_model_data": 1204 },
+            "model": "valorantmc:item/ghost_glitchpop"
+        }
+    ]
 }

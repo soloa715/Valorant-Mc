@@ -1,9 +1,32 @@
-{
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/diamond_sword"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 4003 }, "model": "valorantmc:item/phantom" }
-  ]
+﻿{
+    "parent":  "item/handheld",
+    "textures":  {
+                     "layer0":  "item/diamond_sword"
+                 },
+    "overrides":  [
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4003
+                                        },
+                          "model":  "valorantmc:item/phantom"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4103
+                                        },
+                          "model":  "valorantmc:item/phantom_prime"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4203
+                                        },
+                          "model":  "valorantmc:item/phantom_glitchpop"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4603
+                                        },
+                          "model":  "valorantmc:item/phantom_ion"
+                      }
+                  ]
 }

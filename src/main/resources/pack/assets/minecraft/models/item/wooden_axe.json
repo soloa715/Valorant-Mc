@@ -1,9 +1,16 @@
 {
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/wooden_axe"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 2001 }, "model": "valorantmc:item/stinger" }
-  ]
+    "parent": "item/handheld",
+    "textures": {
+        "layer0": "item/wooden_axe"
+    },
+    "overrides": [
+        {
+            "predicate": { "custom_model_data": 2001 },
+            "model": "valorantmc:item/stinger"
+        },
+        {
+            "predicate": { "custom_model_data": 2601 },
+            "model": "valorantmc:item/stinger_ion"
+        }
+    ]
 }

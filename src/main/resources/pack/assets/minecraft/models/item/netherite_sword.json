@@ -1,9 +1,44 @@
-{
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/netherite_sword"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 4004 }, "model": "valorantmc:item/vandal" }
-  ]
+﻿{
+    "parent":  "item/handheld",
+    "textures":  {
+                     "layer0":  "item/netherite_sword"
+                 },
+    "overrides":  [
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4004
+                                        },
+                          "model":  "valorantmc:item/vandal"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4104
+                                        },
+                          "model":  "valorantmc:item/vandal_prime"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4204
+                                        },
+                          "model":  "valorantmc:item/vandal_glitchpop"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4304
+                                        },
+                          "model":  "valorantmc:item/vandal_reaver"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4404
+                                        },
+                          "model":  "valorantmc:item/vandal_elderflame"
+                      },
+                      {
+                          "predicate":  {
+                                            "custom_model_data":  4504
+                                        },
+                          "model":  "valorantmc:item/vandal_champions2021"
+                      }
+                  ]
 }

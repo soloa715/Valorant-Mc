@@ -1,9 +1,16 @@
 {
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/stone_pickaxe"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 3002 }, "model": "valorantmc:item/judge" }
-  ]
+    "parent": "item/handheld",
+    "textures": {
+        "layer0": "item/stone_pickaxe"
+    },
+    "overrides": [
+        {
+            "predicate": { "custom_model_data": 3002 },
+            "model": "valorantmc:item/judge"
+        },
+        {
+            "predicate": { "custom_model_data": 3202 },
+            "model": "valorantmc:item/judge_glitchpop"
+        }
+    ]
 }

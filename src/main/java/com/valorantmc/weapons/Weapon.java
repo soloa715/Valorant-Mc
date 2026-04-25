@@ -80,8 +80,14 @@ public class Weapon {
         meta.setDisplayName(ValorantMC.colorize(buildDisplayName()));
         meta.setLore(buildLore());
 
-        // Custom model data for resource-pack textures
-        meta.setCustomModelData(type.getCustomModelId());
+        // Custom model data for resource-pack textures — use skin ID if a skin is applied
+        int modelId = type.getCustomModelId();
+        if (!"default".equals(appliedSkin)) {
+            com.valorantmc.managers.SkinManager.SkinData skin =
+                    ValorantMC.getInstance().getSkinManager().getSkin(appliedSkin);
+            if (skin != null) modelId = skin.customModelId();
+        }
+        meta.setCustomModelData(modelId);
 
         // Unbreakable cosmetic
         meta.setUnbreakable(true);

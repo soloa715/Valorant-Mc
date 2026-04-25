@@ -1,9 +1,16 @@
 {
-  "parent": "item/handheld",
-  "textures": {
-    "layer0": "item/wooden_pickaxe"
-  },
-  "overrides": [
-    { "predicate": { "custom_model_data": 3001 }, "model": "valorantmc:item/bucky" }
-  ]
+    "parent": "item/handheld",
+    "textures": {
+        "layer0": "item/wooden_pickaxe"
+    },
+    "overrides": [
+        {
+            "predicate": { "custom_model_data": 3001 },
+            "model": "valorantmc:item/bucky"
+        },
+        {
+            "predicate": { "custom_model_data": 3601 },
+            "model": "valorantmc:item/bucky_ion"
+        }
+    ]
 }
