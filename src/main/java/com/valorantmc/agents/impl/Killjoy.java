@@ -67,7 +67,7 @@ public class Killjoy extends Agent {
                 for (Player p : loc.getWorld().getPlayers()) {
                     if (game.getTeam(p) == null) continue;
                     if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
-                    if (p.getLocation().distance(loc) <= 3.5) {
+                    if (p.getLocation().distance(loc) <= 5.0) {
                         game.applyDamage(player, p, 5, false, false);
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.GLOWING, 60, 0, false, false));
@@ -91,6 +91,9 @@ public class Killjoy extends Agent {
         abilityE.consume();
 
         Location loc = safeTarget(player, 5).add(0.5, 1, 0.5);
+        // Capture the direction the turret faces when placed (forward 180° arc)
+        org.bukkit.util.Vector turretFacing = player.getLocation().getDirection().setY(0).normalize();
+
         ArmorStand turret = (ArmorStand) player.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
         turret.setCustomName(ValorantMC.colorize("&e[KJ Turret]"));
         turret.setCustomNameVisible(true);
@@ -101,7 +104,7 @@ public class Killjoy extends Agent {
 
         player.getWorld().playSound(loc, Sound.BLOCK_ANVIL_PLACE, 1f, 1.5f);
 
-        // Turret scanning task
+        // Turret scanning task — 180° forward cone only
         new BukkitRunnable() {
             @Override public void run() {
                 if (!turret.isValid() || game.getState() != com.valorantmc.game.GameState.ROUND_ACTIVE) {
@@ -113,13 +116,17 @@ public class Killjoy extends Agent {
                     if (game.getTeam(p) == null) continue;
                     if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                     double dist = p.getLocation().distance(loc);
-                    if (dist <= 10) {
-                        // Fire a bullet
-                        loc.getWorld().spawnParticle(Particle.CRIT, loc.clone().add(0,1,0), 3, 0, 0, 0, 0.5);
-                        game.applyDamage(player, p, 18, false, false);
-                        p.sendActionBar(ValorantMC.colorize("&e[Turret] &fKilljoy's turret is shooting you!"));
-                        return; // only shoot one target per tick
-                    }
+                    if (dist > 10) continue;
+                    // 180° FOV check: dot product of turretFacing · direction-to-target must be > 0
+                    org.bukkit.util.Vector toTarget = p.getLocation().toVector()
+                            .subtract(loc.toVector()).setY(0);
+                    if (toTarget.lengthSquared() < 0.001) continue; // target is at turret position
+                    if (turretFacing.dot(toTarget.normalize()) <= 0) continue; // behind the turret
+                    // Fire a bullet
+                    loc.getWorld().spawnParticle(Particle.CRIT, loc.clone().add(0, 1, 0), 3, 0, 0, 0, 0.5);
+                    game.applyDamage(player, p, 18, false, false);
+                    p.sendActionBar(ValorantMC.colorize("&e[Turret] &fKilljoy's turret is shooting you!"));
+                    return; // only shoot one target per scan
                 }
             }
         }.runTaskTimer(ValorantMC.getInstance(), 0L, 15L); // shoots every 0.75s

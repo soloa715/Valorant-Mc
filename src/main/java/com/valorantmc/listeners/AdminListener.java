@@ -13,6 +13,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
@@ -685,6 +686,14 @@ public class AdminListener implements Listener {
             stand.setPersistent(false);
             mapMarkers.computeIfAbsent(admin.getUniqueId(), k -> new ArrayList<>()).add(stand);
         });
+    }
+
+    /** Remove marker ArmorStands and restore gamemode when an admin disconnects mid-setup. */
+    @EventHandler
+    public void onAdminQuit(PlayerQuitEvent e) {
+        Player admin = e.getPlayer();
+        removeMapMarkers(admin);
+        mapSetupModes.remove(admin.getUniqueId());
     }
 
     /** Remove all glowing marker ArmorStands for the given admin. */

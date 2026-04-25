@@ -347,6 +347,7 @@ public class ValorantGame {
         attackers.swapSide();
         defenders.swapSide();
         broadcast(ValorantMC.colorize("&6&lHALF TIME! Teams have swapped sides."));
+        updateScoreboard();
         plugin.getServer().getScheduler().runTaskLater(plugin, this::startBuyPhase, 80L);
     }
 
@@ -541,7 +542,18 @@ public class ValorantGame {
                 && spike.getCarrierUUID().equals(victim.getUniqueId());
         if (droppedSpike) {
             spike.drop(victim.getLocation());
-            victim.getInventory().remove(Material.RED_DYE);
+            // Remove by NBT tag so we never wipe a non-spike red dye in the victim's inventory
+            org.bukkit.NamespacedKey spikeKey = new NamespacedKey(plugin, "spike");
+            for (int _si = 0; _si < victim.getInventory().getSize(); _si++) {
+                org.bukkit.inventory.ItemStack _sit = victim.getInventory().getItem(_si);
+                if (_sit == null || !_sit.hasItemMeta()) continue;
+                Boolean _isSpike = _sit.getItemMeta().getPersistentDataContainer()
+                        .get(spikeKey, org.bukkit.persistence.PersistentDataType.BOOLEAN);
+                if (Boolean.TRUE.equals(_isSpike)) {
+                    victim.getInventory().setItem(_si, null);
+                    break;
+                }
+            }
         }
         // Cancel any plant/defuse the victim was performing
         if (plugin.getAbilityListener() != null) plugin.getAbilityListener().cancelFor(victim);
