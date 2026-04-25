@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "valorantmc",
+  "version": "${version}",
+  "name": "ValorantMC Companion",
+  "description": "Client-side companion for the ValorantMC server plugin: keybinds, custom HUD, and weapon models.",
+  "authors": ["ValorantMC"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main":   ["com.valorantmc.mod.ValorantMCMod"],
+    "client": ["com.valorantmc.mod.ValorantMCClientMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api":   "*",
+    "minecraft":    "~1.21"
+  }
+}

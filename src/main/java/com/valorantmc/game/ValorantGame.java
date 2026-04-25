@@ -78,8 +78,10 @@ public class ValorantGame {
     public static final double BARRIER_RADIUS = 14.0; // blocks from spawn; players can't cross
 
     // ── Constants ─────────────────────────────────────────────────────────────
-    private static final int ROUNDS_TO_WIN = 13;
+    private static final int ROUNDS_TO_WIN   = 13;
     private static final int HALF_TIME_ROUND = 12;
+
+    private boolean isOvertime = false;
 
     public ValorantGame(ValorantMC plugin, String id) {
         this.plugin    = plugin;
@@ -343,16 +345,42 @@ public class ValorantGame {
 
         updateScoreboard();
 
-        // Check if game is over
-        if (winner.getRoundWins() >= ROUNDS_TO_WIN) {
-            plugin.getServer().getScheduler().runTaskLater(plugin, () -> endGame(winner), 80L);
-            return;
-        }
+        int atkWins = attackers.getRoundWins();
+        int defWins = defenders.getRoundWins();
 
-        // Halftime swap
-        if (currentRound == HALF_TIME_ROUND) {
-            plugin.getServer().getScheduler().runTaskLater(plugin, this::doHalfTime, 80L);
-            return;
+        if (!isOvertime) {
+            // Check regular win (first to 13)
+            if (atkWins >= ROUNDS_TO_WIN || defWins >= ROUNDS_TO_WIN) {
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> endGame(winner), 80L);
+                return;
+            }
+            // Enter overtime at 12-12
+            if (atkWins == ROUNDS_TO_WIN - 1 && defWins == ROUNDS_TO_WIN - 1) {
+                isOvertime = true;
+                broadcast(ValorantMC.colorize("&6&lOVERTIME! First team to win 2 rounds in a row wins!"));
+                broadcastTitle(
+                        Component.text("OVERTIME").color(NamedTextColor.GOLD),
+                        Component.text("12 — 12").color(NamedTextColor.WHITE));
+                plugin.getServer().getScheduler().runTaskLater(plugin, this::startBuyPhase, 80L);
+                return;
+            }
+            // Halftime swap (only in regulation)
+            if (currentRound == HALF_TIME_ROUND) {
+                plugin.getServer().getScheduler().runTaskLater(plugin, this::doHalfTime, 80L);
+                return;
+            }
+        } else {
+            // Overtime: win if ahead by 2 (handles consecutive OT rounds)
+            if (Math.abs(atkWins - defWins) >= 2) {
+                ValorantTeam otWinner = atkWins > defWins ? attackers : defenders;
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> endGame(otWinner), 80L);
+                return;
+            }
+            // After each OT pair (even difference), swap sides briefly to announce
+            if ((atkWins + defWins) % 2 == 0) {
+                broadcast(ValorantMC.colorize("&6Still tied at &c" + atkWins + " &6— &b" + defWins
+                        + " &6— another round of overtime!"));
+            }
         }
 
         // Next round after 4 seconds
@@ -649,6 +677,18 @@ public class ValorantGame {
         showTitle(victim,
                 Component.text("ELIMINATED").color(NamedTextColor.RED),
                 Component.text("Wait for next round").color(NamedTextColor.GRAY));
+
+        // Death recap — private message to the victim
+        if (killer != null) {
+            com.valorantmc.weapons.Weapon killerWeapon =
+                    plugin.getWeaponManager().getHeldWeapon(killer);
+            String weaponName = killerWeapon != null
+                    ? killerWeapon.getType().getDisplayName() : "Unknown";
+            victim.sendMessage(ValorantMC.colorize(
+                    "&8[Death Recap] &cYou were eliminated by &f" + killer.getName()
+                    + " &7using &e" + weaponName
+                    + (headshot ? " &c(Headshot)" : "") + "&7."));
+        }
 
         // Announce if drops spike
         if (droppedSpike) {

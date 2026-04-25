@@ -8,5 +8,6 @@
   "key.valorantmc.ability_c":     "Use C Ability",
   "key.valorantmc.ability_q":     "Use Q Ability",
   "key.valorantmc.ability_e":     "Use E Ability",
-  "key.valorantmc.ult":           "Use Ultimate"
+  "key.valorantmc.ult":           "Use Ultimate",
+  "key.valorantmc.admin":         "Open Admin Menu"
 }

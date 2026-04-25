@@ -129,6 +129,8 @@ public class GameListener implements Listener {
         }
         plugin.getLobbyManager().exitLobby(p);
         plugin.getEconomyManager().savePlayer(p.getUniqueId());
+        if (plugin.getFabricChannelListener() != null)
+            plugin.getFabricChannelListener().removePlayer(p);
     }
 
     // ── Block interaction lockdown ─────────────────────────────────────────────

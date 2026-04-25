@@ -128,41 +128,52 @@ public class Spike {
     // ── Private tasks ─────────────────────────────────────────────────────────
 
     private void startBeepTask() {
-        int intervalSeconds = ValorantMC.getInstance().getConfig().getInt("sounds.spike-beep-interval", 3);
+        // Beep interval decreases as detonation nears:
+        //   countdown > 25 → every 3 s    (60 ticks)
+        //   countdown 15–25 → every 1.5 s  (30 ticks)
+        //   countdown 8–15  → every 0.75 s (15 ticks)
+        //   countdown 0–8   → every 0.25 s (5 ticks)
+        // We poll every 5 ticks and track elapsed ticks since last beep.
         beepTask = new BukkitRunnable() {
-            double pitch = 1.0;
+            int ticksSinceBeep = 0;
             @Override
             public void run() {
                 if (state != SpikeState.PLANTED && state != SpikeState.DEFUSING) {
                     cancel();
                     return;
                 }
-                if (plantLocation != null) {
-                    plantLocation.getWorld().playSound(plantLocation,
-                            Sound.BLOCK_NOTE_BLOCK_PLING, 1f, (float) pitch);
+                ticksSinceBeep += 5;
+                int cd = detonationCountdown;  // read current value written by detonationTask
+                int intervalTicks = cd > 25 ? 60 : cd > 15 ? 30 : cd > 8 ? 15 : 5;
+                if (ticksSinceBeep >= intervalTicks) {
+                    ticksSinceBeep = 0;
+                    if (plantLocation != null) {
+                        float pitch = cd > 15 ? 1.0f : cd > 8 ? 1.4f : 1.9f;
+                        plantLocation.getWorld().playSound(
+                                plantLocation, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, pitch);
+                    }
                 }
-                pitch = Math.min(2.0, pitch + 0.05);
             }
-        }.runTaskTimer(ValorantMC.getInstance(), 0L, (long)(intervalSeconds * 20L));
+        }.runTaskTimer(ValorantMC.getInstance(), 0L, 5L);
     }
 
     private void startDetonationTask() {
         detonationTask = new BukkitRunnable() {
-            int countdown = detonationCountdown;
             @Override
             public void run() {
                 if (state == SpikeState.DEFUSED || state == SpikeState.DETONATED) {
                     cancel();
                     return;
                 }
-                if (countdown <= 10 && countdown > 0) {
-                    game.broadcast(ValorantMC.colorize("&c&lSpike detonates in &e" + countdown + "&c&l seconds!"));
+                if (detonationCountdown <= 10 && detonationCountdown > 0) {
+                    game.broadcast(ValorantMC.colorize(
+                            "&c&lSpike detonates in &e" + detonationCountdown + "&c&l seconds!"));
                 }
-                if (countdown <= 0) {
+                if (detonationCountdown <= 0) {
                     detonate();
                     cancel();
                 } else {
-                    countdown--;
+                    detonationCountdown--;
                 }
             }
         }.runTaskTimer(ValorantMC.getInstance(), 20L, 20L);

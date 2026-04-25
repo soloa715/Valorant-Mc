@@ -41,6 +41,12 @@ public class HudManager {
 
                     updateAmmoBar(player);
                     updateActionBar(player, game);
+                    // Send structured HUD packet to Fabric mod clients
+                    com.valorantmc.network.FabricChannelListener fab =
+                            plugin.getFabricChannelListener();
+                    if (fab != null && fab.hasMod(player)) {
+                        fab.sendHud(player, game);
+                    }
                 }
             }
         }.runTaskTimer(plugin, 0L, 4L);

@@ -25,6 +25,8 @@ public final class ValorantMC extends JavaPlugin {
     private StatsManager statsManager;
     private HudManager hudManager;
     private LobbyManager lobbyManager;
+    private ResourcePackManager resourcePackManager;
+    private com.valorantmc.network.FabricChannelListener fabricChannelListener;
     private final java.util.Map<java.util.UUID, com.valorantmc.game.CustomGameSettings> customSettings
             = new java.util.HashMap<>();
     private com.valorantmc.listeners.AbilityListener abilityListener;
@@ -53,8 +55,12 @@ public final class ValorantMC extends JavaPlugin {
         mapManager     = new MapManager(this);
         statsManager   = new StatsManager(this);
         gameManager    = new GameManager(this);
-        hudManager     = new HudManager(this);
+        hudManager          = new HudManager(this);
         hudManager.start();
+        resourcePackManager = new ResourcePackManager(this);
+        resourcePackManager.start();
+        fabricChannelListener = new com.valorantmc.network.FabricChannelListener(this);
+        fabricChannelListener.register();
 
         // Register commands
         ValorantCommand cmd = new ValorantCommand(this);
@@ -89,15 +95,6 @@ public final class ValorantMC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(abilityListener, this);
         getServer().getPluginManager().registerEvents(new SpectatorListener(this), this);
 
-        // Resource pack prompt
-        if (getConfig().getBoolean("resource-pack.enabled")) {
-            String url  = getConfig().getString("resource-pack.url", "");
-            String hash = getConfig().getString("resource-pack.hash", "");
-            if (!url.isEmpty()) {
-                getServer().getOnlinePlayers().forEach(p -> p.setResourcePack(url, hash));
-            }
-        }
-
         getLogger().info("=================================");
         getLogger().info("  ValorantMC v" + getDescription().getVersion() + " enabled!");
         getLogger().info("  Weapons: " + weaponManager.getWeaponCount());
@@ -111,6 +108,8 @@ public final class ValorantMC extends JavaPlugin {
         if (economyManager != null) economyManager.saveAll();
         if (skinManager    != null) skinManager.saveAll();
         if (statsManager   != null) statsManager.saveAll();
+        if (fabricChannelListener != null) fabricChannelListener.unregister();
+        if (resourcePackManager != null) resourcePackManager.stop();
         if (hudManager     != null) hudManager.stop();
         if (gameManager    != null) gameManager.shutdown();
         getLogger().info("ValorantMC disabled. Good game!");
@@ -129,7 +128,9 @@ public final class ValorantMC extends JavaPlugin {
     public MapManager     getMapManager()     { return mapManager;     }
     public StatsManager   getStatsManager()   { return statsManager;   }
     public HudManager     getHudManager()     { return hudManager;     }
-    public LobbyManager   getLobbyManager()   { return lobbyManager;   }
+    public LobbyManager         getLobbyManager()         { return lobbyManager;         }
+    public ResourcePackManager  getResourcePackManager()  { return resourcePackManager;  }
+    public com.valorantmc.network.FabricChannelListener getFabricChannelListener() { return fabricChannelListener; }
     public com.valorantmc.game.CustomGameSettings getCustomSettings(java.util.UUID uuid) {
         return customSettings.computeIfAbsent(uuid, k -> new com.valorantmc.game.CustomGameSettings());
     }

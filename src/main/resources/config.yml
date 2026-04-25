@@ -74,8 +74,9 @@ sounds:
 #             sha1sum ValorantMC-ResourcePack.zip                  (Linux/Mac)
 resource-pack:
   enabled: false
-  url: ""
-  hash: ""
+  url: ""       # leave blank to use the built-in HTTP server
+  hash: ""      # leave blank for auto-computed SHA-1
+  port: 8765    # port for the built-in server (only used when url is blank)
   required: false
   message: "&aInstall the ValorantMC resource pack for custom weapon models and skins!"
 
