@@ -257,11 +257,13 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
     private boolean handleTp(CommandSender sender, String[] args) {
         if (!sender.hasPermission("valorantmc.admin")) { sender.sendMessage(plugin.msg("errors.no-permission")); return true; }
         if (!(sender instanceof Player p)) { sender.sendMessage(plugin.msg("errors.player-only")); return true; }
-        // /valorant tp <game-id> — teleport to game's first spawn
-        if (args.length < 2) return true;
+        if (args.length < 2) { p.sendMessage(ValorantMC.colorize("&cUsage: /valorant tp <game-id>")); return true; }
         ValorantGame game = plugin.getGameManager().getGame(args[1]);
-        if (game == null) { p.sendMessage(ValorantMC.colorize("&cGame not found!")); return true; }
-        p.sendMessage(ValorantMC.colorize("&aTeleported to game &e" + args[1]));
+        if (game == null) { p.sendMessage(ValorantMC.colorize("&cGame not found: " + args[1])); return true; }
+        List<Location> spawns = game.getAttackSpawnsPublic();
+        if (spawns.isEmpty()) { p.sendMessage(ValorantMC.colorize("&cNo spawn points configured for game &e" + args[1] + "&c.")); return true; }
+        p.teleport(spawns.get(0));
+        p.sendMessage(ValorantMC.colorize("&aTeleported to game &e" + args[1] + "&a's attacker spawn."));
         return true;
     }
 
@@ -289,8 +291,15 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
         com.valorantmc.game.Spike s = g.getSpike();
         if (s.getCarrierUUID() != null && s.getCarrierUUID().equals(p.getUniqueId())) {
             s.drop(p.getLocation());
-            // Remove the red-dye spike item
-            p.getInventory().remove(org.bukkit.Material.RED_DYE);
+            // Remove only the NBT-tagged spike item, never a generic red dye
+            org.bukkit.NamespacedKey spikeKey = new org.bukkit.NamespacedKey(plugin, "spike");
+            for (int si = 0; si < p.getInventory().getSize(); si++) {
+                org.bukkit.inventory.ItemStack sit = p.getInventory().getItem(si);
+                if (sit == null || !sit.hasItemMeta()) continue;
+                Boolean flag = sit.getItemMeta().getPersistentDataContainer()
+                        .get(spikeKey, org.bukkit.persistence.PersistentDataType.BOOLEAN);
+                if (Boolean.TRUE.equals(flag)) { p.getInventory().setItem(si, null); break; }
+            }
             p.sendMessage(ValorantMC.colorize("&cSpike dropped at your feet."));
         }
         return true;
@@ -378,19 +387,28 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("help", "join", "leave", "shop", "agent", "stats", "maps", "skins",
-                    "create", "start", "reload");
+            List<String> subs = new ArrayList<>(List.of(
+                    "help", "join", "leave", "shop", "agent", "stats", "maps", "skins",
+                    "create", "start", "list", "status", "tp", "setlobby", "reload"));
+            if (sender.hasPermission("valorantmc.admin")) {
+                subs.addAll(List.of("forcestart", "kick", "pause", "resume"));
+            }
+            return subs;
         }
         if (args.length == 2) {
             return switch (args[0].toLowerCase()) {
-                case "join", "start", "tp" -> new ArrayList<>(plugin.getGameManager().getGameIds());
-                case "stats" -> plugin.getServer().getOnlinePlayers().stream()
+                case "join", "start", "forcestart", "tp", "status", "pause", "resume" ->
+                        new ArrayList<>(plugin.getGameManager().getGameIds());
+                case "kick", "stats" -> plugin.getServer().getOnlinePlayers().stream()
                         .map(Player::getName).toList();
                 default -> List.of();
             };
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("start")) {
-            return new ArrayList<>(plugin.getMapManager().getMapNames());
+        if (args.length == 3) {
+            return switch (args[0].toLowerCase()) {
+                case "start", "forcestart" -> new ArrayList<>(plugin.getMapManager().getMapNames());
+                default -> List.of();
+            };
         }
         return List.of();
     }
