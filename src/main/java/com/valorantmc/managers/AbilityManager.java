@@ -27,11 +27,22 @@ public class AbilityManager {
             return;
         }
 
+        // Custom: unlimited abilities — reset all cooldowns/charges before use
+        com.valorantmc.game.CustomGameSettings cs = game.getCustomSettings();
+        if (cs != null && cs.unlimitedAbilities) {
+            agent.resetAbilitiesForCustomGame();
+        }
+
         switch (Character.toUpperCase(key)) {
             case 'C' -> agent.useC(player, game);
             case 'Q' -> agent.useQ(player, game);
             case 'E' -> agent.useE(player, game);
             case 'X' -> agent.useX(player, game);
+        }
+
+        // Custom: restore again after use so the item shows as ready
+        if (cs != null && cs.unlimitedAbilities) {
+            agent.resetAbilitiesForCustomGame();
         }
 
         // Refresh ability items after use

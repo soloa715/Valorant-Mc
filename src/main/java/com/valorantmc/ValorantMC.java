@@ -25,6 +25,8 @@ public final class ValorantMC extends JavaPlugin {
     private StatsManager statsManager;
     private HudManager hudManager;
     private LobbyManager lobbyManager;
+    private final java.util.Map<java.util.UUID, com.valorantmc.game.CustomGameSettings> customSettings
+            = new java.util.HashMap<>();
     private com.valorantmc.listeners.AbilityListener abilityListener;
 
     private FileConfiguration messages;
@@ -67,6 +69,7 @@ public final class ValorantMC extends JavaPlugin {
         getCommand("vuse").setExecutor(cmd);
         getCommand("vskin").setExecutor(cmd);
         getCommand("vplay").setExecutor(cmd);
+        getCommand("vcustom").setExecutor(cmd);
         Objects.requireNonNull(getCommand("vmapsetup")).setExecutor(new com.valorantmc.commands.MapSetupCommand(this));
         Objects.requireNonNull(getCommand("vadmin")).setExecutor(
                 (sender, cmd2, label, args) -> {
@@ -127,6 +130,9 @@ public final class ValorantMC extends JavaPlugin {
     public StatsManager   getStatsManager()   { return statsManager;   }
     public HudManager     getHudManager()     { return hudManager;     }
     public LobbyManager   getLobbyManager()   { return lobbyManager;   }
+    public com.valorantmc.game.CustomGameSettings getCustomSettings(java.util.UUID uuid) {
+        return customSettings.computeIfAbsent(uuid, k -> new com.valorantmc.game.CustomGameSettings());
+    }
     public com.valorantmc.listeners.AbilityListener getAbilityListener() { return abilityListener; }
 
     public FileConfiguration getMessages() { return messages; }

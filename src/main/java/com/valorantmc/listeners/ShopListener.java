@@ -81,6 +81,71 @@ public class ShopListener implements Listener {
             return;
         }
 
+        // ── Custom Game GUI ───────────────────────────────────────────────────
+        if (title.equals(com.valorantmc.shop.CustomGameGUI.TITLE)) {
+            e.setCancelled(true);
+            if (clicked == null || !clicked.hasItemMeta()) return;
+            String cgAction = clicked.getItemMeta().getPersistentDataContainer()
+                    .get(new NamespacedKey(plugin, "cg_action"), PersistentDataType.STRING);
+            if (cgAction == null) return;
+
+            com.valorantmc.game.CustomGameSettings s = plugin.getCustomSettings(player.getUniqueId());
+            boolean rebuilt = true;
+
+            switch (cgAction) {
+                case "toggle_unlimited_abilities" -> s.unlimitedAbilities = !s.unlimitedAbilities;
+                case "toggle_infinite_credits"    -> s.infiniteCredits    = !s.infiniteCredits;
+                case "toggle_wallhack"            -> s.wallhack           = !s.wallhack;
+                case "toggle_one_shot"            -> s.oneShot            = !s.oneShot;
+                case "toggle_infinite_ammo"       -> s.infiniteAmmo       = !s.infiniteAmmo;
+                case "toggle_no_cooldowns"        -> s.noCooldowns        = !s.noCooldowns;
+                case "toggle_show_hp"             -> s.showEnemyHP        = !s.showEnemyHP;
+                case "toggle_ff"                  -> s.allowTeamDamage    = !s.allowTeamDamage;
+                case "dmg_mult" -> {
+                    boolean right = e.getClick() == org.bukkit.event.inventory.ClickType.RIGHT;
+                    s.abilityDmgMult = Math.max(0.25f, Math.min(3.0f,
+                            s.abilityDmgMult + (right ? 0.25f : -0.25f)));
+                }
+                case "start_credits" -> {
+                    boolean right = e.getClick() == org.bukkit.event.inventory.ClickType.RIGHT;
+                    s.startingCredits = Math.max(0, Math.min(9000,
+                            s.startingCredits + (right ? 200 : -200)));
+                }
+                case "max_rounds" -> {
+                    boolean right = e.getClick() == org.bukkit.event.inventory.ClickType.RIGHT;
+                    s.maxRounds = Math.max(0, s.maxRounds + (right ? 1 : -1));
+                }
+                case "start_custom" -> {
+                    player.closeInventory();
+                    rebuilt = false;
+                    s.hostUUID = player.getUniqueId().toString();
+                    String gameId = "custom-" + player.getName() + "-" + System.currentTimeMillis() % 10000;
+                    com.valorantmc.game.ValorantGame cg = plugin.getGameManager().createGame(gameId);
+                    cg.setCustomSettings(s);
+                    cg.addPlayer(player);
+                    plugin.getGameManager().registerPlayerGame(player, gameId);
+                    plugin.getLobbyManager().exitLobby(player);
+                    player.sendMessage(ValorantMC.colorize(
+                            "&e[Custom] &aGame &f" + gameId + " &acreated! Use &e/valorant start "
+                            + gameId + " <map>&a when ready."));
+                }
+                case "back" -> {
+                    player.closeInventory();
+                    rebuilt = false;
+                    player.openInventory(com.valorantmc.shop.MainMenuGUI.build(player, plugin));
+                }
+                default -> rebuilt = false;
+            }
+
+            if (rebuilt) {
+                // Refresh the GUI to reflect the new setting value
+                final com.valorantmc.game.CustomGameSettings finalS = s;
+                plugin.getServer().getScheduler().runTaskLater(plugin, () ->
+                        player.openInventory(com.valorantmc.shop.CustomGameGUI.build(player, finalS)), 1L);
+            }
+            return;
+        }
+
         // ── Lobby GUI ─────────────────────────────────────────────────────────
         if (title.equals(com.valorantmc.shop.LobbyGUI.TITLE)) {
             e.setCancelled(true);

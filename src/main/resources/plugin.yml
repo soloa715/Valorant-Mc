@@ -49,6 +49,10 @@ commands:
     aliases: [admin, ap]
     usage: /vadmin
     permission: valorantmc.admin
+  vcustom:
+    description: Open the custom game creator
+    aliases: [custom, vgame]
+    usage: /vcustom
   vmapsetup:
     description: In-game map setup wizard for server hosters
     aliases: [mapsetup, vmap]

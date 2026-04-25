@@ -69,6 +69,11 @@ public class GameManager {
         playerGameMap.clear();
     }
 
+    /** Register a player as being in a game without running addPlayer() again (used after manual addPlayer). */
+    public void registerPlayerGame(Player p, String gameId) {
+        playerGameMap.put(p.getUniqueId(), gameId);
+    }
+
     // ── Queries ───────────────────────────────────────────────────────────────
 
     public ValorantGame getGame(String id)    { return games.get(id); }

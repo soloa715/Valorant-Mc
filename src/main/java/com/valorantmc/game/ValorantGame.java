@@ -28,6 +28,9 @@ public class ValorantGame {
     private final ValorantMC plugin;
     private final String id;
 
+    // ── Custom game settings (null = standard match) ──────────────────────────
+    private CustomGameSettings customSettings = null;
+
     // ── Teams ─────────────────────────────────────────────────────────────────
     private final ValorantTeam attackers;
     private final ValorantTeam defenders;
@@ -256,6 +259,19 @@ public class ValorantGame {
 
         state = GameState.ROUND_ACTIVE;
         int roundDuration = plugin.getConfig().getInt("game.round-duration", 100);
+
+        // Custom: wallhack — apply permanent glow to all enemies for each player
+        if (customSettings != null && customSettings.wallhack) {
+            getAllPlayers().forEach(p -> {
+                ValorantTeam enemies = getEnemyTeam(p);
+                if (enemies == null) return;
+                enemies.getOnlinePlayers().forEach(enemy -> enemy.addPotionEffect(
+                        new org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.GLOWING,
+                                Integer.MAX_VALUE, 0, false, false)));
+            });
+        }
+
         broadcast(ValorantMC.colorize("&c&lFIGHT!"));
         broadcastTitle(
                 Component.text("FIGHT!").color(NamedTextColor.RED),
@@ -472,6 +488,18 @@ public class ValorantGame {
         playerHealth.putIfAbsent(target.getUniqueId(), 100);
         playerShield.putIfAbsent(target.getUniqueId(), 0);
 
+        // Custom: one-shot bypasses all calculations
+        if (customSettings != null && customSettings.oneShot) {
+            handleDeath(source, target, isHeadshot);
+            return;
+        }
+
+        // Custom: skip friendly fire check override
+        if (customSettings != null && customSettings.allowTeamDamage && source != null) {
+            // Friendly fire is allowed — don't return even if same team
+            // (WeaponListener already blocks same-team; we re-allow here via the flag being checked there)
+        }
+
         double hsMultiplier = plugin.getConfig().getDouble("weapons.headshot-multiplier", 2.5);
         double multiplier = isHeadshot ? hsMultiplier : isLegshot ? 0.85 : 1.0;
         int finalDamage = (int) Math.ceil(rawDamage * multiplier);
@@ -507,6 +535,16 @@ public class ValorantGame {
             String location = isHeadshot ? "&c[HEADSHOT]" : isLegshot ? "&7[LEG]" : "&f[BODY]";
             source.sendActionBar(ValorantMC.colorize(location + " &f" + finalDamage
                     + " &8→ " + target.getName() + " &8(" + Math.max(0, hp) + "hp)"));
+        }
+
+        // Custom: broadcast enemy HP to all after every hit
+        if (customSettings != null && customSettings.showEnemyHP && hp > 0 && source != null) {
+            ValorantTeam srcTeam = getTeam(source);
+            if (srcTeam != null) {
+                srcTeam.getOnlinePlayers().forEach(p -> p.sendMessage(
+                        ValorantMC.colorize("&8[HP] &7" + target.getName()
+                                + " has &c" + hp + " HP &7remaining.")));
+            }
         }
 
         // Hit sound / particles
@@ -635,12 +673,20 @@ public class ValorantGame {
     // ── Helper methods ─────────────────────────────────────────────────────────
 
     private void giveRoundStartCredits() {
-        int startingCredits = plugin.getConfig().getInt("game.starting-credits", 800);
+        // Custom: infinite credits — always set to max
+        if (customSettings != null && customSettings.infiniteCredits) {
+            getAllPlayers().forEach(p ->
+                    plugin.getEconomyManager().setCredits(p.getUniqueId(), 9000));
+            return;
+        }
+        // Custom: override starting credits amount
+        int startingCredits = customSettings != null
+                ? customSettings.startingCredits
+                : plugin.getConfig().getInt("game.starting-credits", 800);
         if (currentRound == 1) {
             getAllPlayers().forEach(p ->
                     plugin.getEconomyManager().setCredits(p.getUniqueId(), startingCredits));
         }
-        // Existing credits carry over — just cap them
         getAllPlayers().forEach(p ->
                 plugin.getEconomyManager().capCredits(p.getUniqueId()));
     }
@@ -695,6 +741,11 @@ public class ValorantGame {
             p.setSpectatorTarget(null);
             p.setGameMode(GameMode.ADVENTURE);
         });
+        // Custom: wallhack glow is re-applied each round start; clear it during revive window
+        if (customSettings != null && customSettings.wallhack) {
+            getAllPlayers().forEach(p ->
+                    p.removePotionEffect(org.bukkit.potion.PotionEffectType.GLOWING));
+        }
     }
 
     private void teleportToSpawns() {
@@ -883,6 +934,9 @@ public class ValorantGame {
     public boolean isPaused() { return paused; }
 
     // ── Getters ───────────────────────────────────────────────────────────────
+
+    public CustomGameSettings getCustomSettings()                      { return customSettings; }
+    public void               setCustomSettings(CustomGameSettings s) { this.customSettings = s; }
 
     public String         getId()           { return id;          }
     public GameState      getState()        { return state;       }

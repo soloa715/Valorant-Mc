@@ -56,19 +56,26 @@ public class WeaponManager {
         UUID uuid = p.getUniqueId();
         long now = System.currentTimeMillis();
 
-        // Reload check
-        if (reloadEnd.containsKey(uuid) && now < reloadEnd.get(uuid)) {
+        // Custom game overrides
+        com.valorantmc.game.CustomGameSettings cs = getCustomSettings(p);
+        boolean infAmmo      = cs != null && cs.infiniteAmmo;
+        boolean noCooldowns  = cs != null && cs.noCooldowns;
+
+        // Reload check (skip if noCooldowns)
+        if (!noCooldowns && reloadEnd.containsKey(uuid) && now < reloadEnd.get(uuid)) {
             return false;
         }
 
-        // Cooldown check
-        long cooldownMs = (long) (1000.0 / weapon.getType().getFireRate());
-        if (shootCooldown.containsKey(uuid) && now - shootCooldown.get(uuid) < cooldownMs) {
-            return false;
+        // Cooldown check (skip if noCooldowns)
+        if (!noCooldowns) {
+            long cooldownMs = (long) (1000.0 / weapon.getType().getFireRate());
+            if (shootCooldown.containsKey(uuid) && now - shootCooldown.get(uuid) < cooldownMs) {
+                return false;
+            }
         }
 
-        // Ammo check
-        if (!weapon.canShoot()) {
+        // Ammo check (skip if infiniteAmmo)
+        if (!infAmmo && !weapon.canShoot()) {
             if (weapon.getCurrentAmmo() == 0) {
                 p.sendMessage(plugin.msg("weapons.no-ammo"));
                 tryReload(p, weapon);
@@ -76,10 +83,16 @@ public class WeaponManager {
             return false;
         }
 
-        weapon.consumeBullet();
+        if (!infAmmo) weapon.consumeBullet();
         shootCooldown.put(uuid, now);
         updateHeldItem(p, weapon);
         return true;
+    }
+
+    /** Returns the CustomGameSettings for the game the player is in, or null. */
+    private com.valorantmc.game.CustomGameSettings getCustomSettings(Player p) {
+        com.valorantmc.game.ValorantGame g = plugin.getGameManager().getGame(p);
+        return g == null ? null : g.getCustomSettings();
     }
 
     // ── Reloading ─────────────────────────────────────────────────────────────

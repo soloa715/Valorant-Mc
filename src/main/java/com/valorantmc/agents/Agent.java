@@ -89,6 +89,14 @@ public abstract class Agent {
             while (!abilityX.isUltReady()) abilityX.addUltPoint();
     }
 
+    /** Reset all abilities to full charges and clear cooldowns (used by custom game unlimited mode). */
+    public void resetAbilitiesForCustomGame() {
+        abilityC.resetCharges();
+        abilityQ.resetCharges();
+        abilityE.resetCharges();
+        fillUlt(); // ult is always ready in custom mode
+    }
+
     /** Called when this agent kills someone */
     public void onKill(Player player, Player victim, ValorantGame game) {
         abilityX.addUltPoint();

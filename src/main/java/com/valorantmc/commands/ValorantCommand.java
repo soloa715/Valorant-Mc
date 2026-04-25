@@ -38,6 +38,7 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
             case "vuse"       -> { return handleUseAbility(sender, args); }
             case "vskin"      -> { return handleSkinGui(sender); }
             case "vplay"      -> { return handlePlayLobby(sender); }
+            case "vcustom"    -> { return handleCustomGame(sender); }
             case "vskip"      -> { return handleSkipVote(sender); }
         }
 
@@ -314,6 +315,13 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
     private boolean handlePlayLobby(CommandSender sender) {
         if (!(sender instanceof Player p)) return true;
         p.openInventory(com.valorantmc.shop.LobbyGUI.build(p));
+        return true;
+    }
+
+    private boolean handleCustomGame(CommandSender sender) {
+        if (!(sender instanceof Player p)) return true;
+        p.openInventory(com.valorantmc.shop.CustomGameGUI.build(p,
+                plugin.getCustomSettings(p.getUniqueId())));
         return true;
     }
 
