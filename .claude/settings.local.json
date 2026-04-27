@@ -34,7 +34,10 @@
       "Bash(./mvnw clean *)",
       "Read(//c/ProgramData/chocolatey/**)",
       "Read(//c/Users/solo/**)",
-      "Bash(where gradle *)"
+      "Bash(where gradle *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\" -Directory | Where-Object { $_.Name -match \"java|jdk|jre|adoptium|eclipse|microsoft|temurin|graalvm|liberica|zulu|corretto\" -and $_.Name -notmatch \"eclipse IDE\" } | Select-Object FullName)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(Test-Path \"C:\\\\Users\\\\solo\\\\.jdks\"; Get-ChildItem \"C:\\\\Users\\\\solo\" -Directory -Depth 2 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match \"java|jdk|sdk\" } | Select-Object FullName)"
     ]
   }
 }
