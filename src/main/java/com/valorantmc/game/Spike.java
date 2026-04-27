@@ -240,6 +240,7 @@ public class Spike {
     public Location   getPlantLocation() { return plantLocation; }
     public boolean    isPlanted()        { return state == SpikeState.PLANTED || state == SpikeState.DEFUSING; }
     public boolean    isCarried()        { return state == SpikeState.CARRIED || state == SpikeState.PLANTING; }
+    public int        getDetonationCountdown() { return detonationCountdown; }
 
     /** Drop the spike (carrier killed or used /vdropspike). */
     public void drop(Location where) {

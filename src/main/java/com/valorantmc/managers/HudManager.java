@@ -34,7 +34,9 @@ public class HudManager {
     public void start() {
         if (task != null) task.cancel();
         task = new BukkitRunnable() {
+            private int tick = 0;
             @Override public void run() {
+                tick++;
                 for (Player player : plugin.getServer().getOnlinePlayers()) {
                     ValorantGame game = plugin.getGameManager().getGame(player);
                     if (game == null) continue;
@@ -46,6 +48,8 @@ public class HudManager {
                             plugin.getFabricChannelListener();
                     if (fab != null && fab.hasMod(player)) {
                         fab.sendHud(player, game);
+                        // Radar every ~10 ticks (40 ticks / 4-tick period = 10 periods)
+                        if (tick % 10 == 0) fab.sendRadar(player, game);
                     }
                 }
             }

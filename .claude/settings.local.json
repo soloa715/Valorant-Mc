@@ -30,7 +30,11 @@
       "Bash(curl -s \"https://api.papermc.io/v2/projects/paper/versions/26.1.2/builds\")",
       "Bash(curl -s \"https://api.papermc.io/v2/projects/paper\")",
       "Bash(curl -s \"https://api.papermc.io/v2/projects/paper/versions/1.21.11/builds\")",
-      "Bash(curl -s \"https://api.papermc.io/v2/projects/paper/versions/1.21.11/builds/69\")"
+      "Bash(curl -s \"https://api.papermc.io/v2/projects/paper/versions/1.21.11/builds/69\")",
+      "Bash(./mvnw clean *)",
+      "Read(//c/ProgramData/chocolatey/**)",
+      "Read(//c/Users/solo/**)",
+      "Bash(where gradle *)"
     ]
   }
 }

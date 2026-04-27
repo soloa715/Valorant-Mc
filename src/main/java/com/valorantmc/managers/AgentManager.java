@@ -29,6 +29,11 @@ public class AgentManager {
         register(new Viper());
         register(new Brimstone());
         register(new Breach());
+        register(new Neon());
+        register(new Skye());
+        register(new Chamber());
+        register(new Fade());
+        register(new Gekko());
     }
 
     private void register(Agent agent) {
@@ -62,6 +67,11 @@ public class AgentManager {
             case "viper"     -> new Viper();
             case "brimstone" -> new Brimstone();
             case "breach"    -> new Breach();
+            case "neon"      -> new Neon();
+            case "skye"      -> new Skye();
+            case "chamber"   -> new Chamber();
+            case "fade"      -> new Fade();
+            case "gekko"     -> new Gekko();
             default          -> null;
         };
     }

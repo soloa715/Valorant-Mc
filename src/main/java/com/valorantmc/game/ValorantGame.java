@@ -673,6 +673,15 @@ public class ValorantGame {
                 + " §f✦ " + victimColor + victim.getName()
                 + (headshot ? " §c§l[HEADSHOT]" : "");
         getAllPlayers().forEach(p -> p.sendActionBar(net.kyori.adventure.text.Component.text(feedMsg)));
+        // Notify mod clients of kill feed entry
+        com.valorantmc.network.FabricChannelListener fab = plugin.getFabricChannelListener();
+        if (fab != null) {
+            String plainFeed = (killer != null ? killer.getName() : "") + " > " + victim.getName()
+                    + (headshot ? " [HS]" : "");
+            getAllPlayers().forEach(p -> {
+                if (fab.hasMod(p)) fab.setPendingKillFeed(p.getUniqueId(), plainFeed);
+            });
+        }
         // ELIMINATED title for victim
         showTitle(victim,
                 Component.text("ELIMINATED").color(NamedTextColor.RED),
@@ -984,6 +993,7 @@ public class ValorantGame {
     public ValorantTeam   getDefenders()    { return defenders;   }
     public Spike          getSpike()        { return spike;       }
     public int            getCurrentRound() { return currentRound;}
+    public int            getRoundTimer()   { return roundTimer;  }
     public String         getMapName()      { return mapName;     }
 
     public ValorantTeam getTeam(Player p) {

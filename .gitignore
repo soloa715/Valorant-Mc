@@ -74,6 +74,14 @@ run/.console_history
 # Third-party plugins that aren't part of this project
 run/plugins/multiverse-core-*.jar
 
+# ── Downloaded tools (re-downloaded by run-server.bat) ───────────────────────
+tools/
+
+# ── Fabric mod build output ───────────────────────────────────────────────────
+mod/build/
+mod/.gradle/
+run/client-mods/
+
 # ── Misc ─────────────────────────────────────────────────────────────────────
 *.log
 *.tmp

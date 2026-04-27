@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Shared (server + client) mod entrypoint.
- * Registers custom payload types so Fabric networking can route them.
+ * Registers all custom payload types so Fabric networking can route them.
  */
 public class ValorantMCMod implements ModInitializer {
 
@@ -16,8 +16,13 @@ public class ValorantMCMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        // Register payload types on the play channel in both directions
-        PayloadTypeRegistry.playC2S().register(HelloPayload.TYPE, HelloPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(HudPayload.TYPE,   HudPayload.CODEC);
+        // C → S
+        PayloadTypeRegistry.playC2S().register(HelloPayload.TYPE,     HelloPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BuyActionPayload.TYPE, BuyActionPayload.CODEC);
+
+        // S → C
+        PayloadTypeRegistry.playS2C().register(HudPayload.TYPE,     HudPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BuyMenuPayload.TYPE, BuyMenuPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(RadarPayload.TYPE,   RadarPayload.CODEC);
     }
 }

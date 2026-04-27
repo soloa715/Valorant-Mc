@@ -73,7 +73,7 @@ sounds:
 # Get SHA-1:  certutil -hashfile ValorantMC-ResourcePack.zip SHA1  (Windows)
 #             sha1sum ValorantMC-ResourcePack.zip                  (Linux/Mac)
 resource-pack:
-  enabled: false
+  enabled: true
   url: ""       # leave blank to use the built-in HTTP server
   hash: ""      # leave blank for auto-computed SHA-1
   port: 8765    # port for the built-in server (only used when url is blank)

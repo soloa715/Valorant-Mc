@@ -104,6 +104,33 @@ public class AbilityListener implements Listener {
                 return;
             }
 
+            // Neon: Overdrive active → fire lightning beam on right-click
+            if (agent instanceof Neon) {
+                Boolean overdrive = player.getPersistentDataContainer()
+                        .get(new NamespacedKey(plugin, "overdrive"), PersistentDataType.BOOLEAN);
+                if (Boolean.TRUE.equals(overdrive)) {
+                    Neon.fireOverdriveBolt(player, game);
+                    return;
+                }
+            }
+
+            // Chamber: Tour de Force active → fire one-shot sniper on right-click
+            if (agent instanceof Chamber) {
+                Integer tdfShots = player.getPersistentDataContainer()
+                        .get(new NamespacedKey(plugin, "tourdeforce"), PersistentDataType.INTEGER);
+                if (tdfShots != null && tdfShots > 0) {
+                    Chamber.fireTourDeForce(player, game);
+                    int remaining = tdfShots - 1;
+                    if (remaining <= 0) {
+                        player.getPersistentDataContainer().remove(new NamespacedKey(plugin, "tourdeforce"));
+                    } else {
+                        player.getPersistentDataContainer().set(new NamespacedKey(plugin, "tourdeforce"),
+                                PersistentDataType.INTEGER, remaining);
+                    }
+                    return;
+                }
+            }
+
             plugin.getAbilityManager().activateAbility(player, abilityKey, game);
             return;
         }
@@ -346,6 +373,26 @@ public class AbilityListener implements Listener {
                 }
             }.runTaskTimer(plugin, 0L, 40L);
             return;
+        }
+
+        // ── Neon Relay Bolt ───────────────────────────────────────────────────
+        if (e.getEntity() instanceof Snowball neonBolt) {
+            String shooterUUID = neonBolt.getPersistentDataContainer()
+                    .get(new NamespacedKey(plugin, "neon_bolt"), PersistentDataType.STRING);
+            if (shooterUUID != null) {
+                neonBolt.remove();
+                Player shooter = plugin.getServer().getPlayer(java.util.UUID.fromString(shooterUUID));
+                if (shooter != null) {
+                    ValorantGame boltGame = plugin.getGameManager().getGame(shooter);
+                    if (boltGame != null) {
+                        Agent boltAgent = boltGame.getAgent(shooter);
+                        if (boltAgent instanceof Neon neon) {
+                            neon.applyBoltEffect(shooter, boltGame, neonBolt.getLocation());
+                        }
+                    }
+                }
+                return;
+            }
         }
 
         // ── Raze Paint Shells ─────────────────────────────────────────────────
