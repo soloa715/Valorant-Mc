@@ -1,26 +1,20 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
-/**
- * Client → server: announces that this client has the ValorantMC mod installed.
- * The server responds by sending HUD packets.
- */
-public record HelloPayload(String version) implements CustomPayload {
+public record HelloPayload(String version) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<HelloPayload> TYPE =
-            new CustomPayload.Id<>(Identifier.of(ValorantMCMod.MOD_ID, "hello"));
+    public static final CustomPacketPayload.Type<HelloPayload> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "hello"));
 
-    public static final PacketCodec<RegistryByteBuf, HelloPayload> CODEC = PacketCodec.of(
-            (value, buf) -> buf.writeString(value.version(), 32),
-            buf -> new HelloPayload(buf.readString(32))
+    public static final StreamCodec<RegistryFriendlyByteBuf, HelloPayload> CODEC = StreamCodec.of(
+            (buf, value) -> buf.writeUtf(value.version(), 32),
+            buf -> new HelloPayload(buf.readUtf(32))
     );
 
     @Override
-    public CustomPayload.Id<? extends CustomPayload> getId() {
-        return TYPE;
-    }
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
 }

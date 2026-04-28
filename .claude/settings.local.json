@@ -37,7 +37,16 @@
       "Bash(where gradle *)",
       "PowerShell(Get-ChildItem \"C:\\\\Program Files\" -Directory | Where-Object { $_.Name -match \"java|jdk|jre|adoptium|eclipse|microsoft|temurin|graalvm|liberica|zulu|corretto\" -and $_.Name -notmatch \"eclipse IDE\" } | Select-Object FullName)",
       "PowerShell(Get-Command *)",
-      "PowerShell(Test-Path \"C:\\\\Users\\\\solo\\\\.jdks\"; Get-ChildItem \"C:\\\\Users\\\\solo\" -Directory -Depth 2 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match \"java|jdk|sdk\" } | Select-Object FullName)"
+      "PowerShell(Test-Path \"C:\\\\Users\\\\solo\\\\.jdks\"; Get-ChildItem \"C:\\\\Users\\\\solo\" -Directory -Depth 2 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match \"java|jdk|sdk\" } | Select-Object FullName)",
+      "WebFetch(domain:fabricmc.net)",
+      "WebFetch(domain:meta.fabricmc.net)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.fabricmc.net)",
+      "WebFetch(domain:mcsrc.dev)",
+      "WebFetch(domain:maven.fabricmc.net)",
+      "Bash(\"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\gradle-9.4.1\\\\bin\\\\gradle.bat\" build *)",
+      "Bash(set \"JAVA_HOME=C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\jdk25\\\\jdk-25.0.2+10\")",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\jdk25\\\\jdk-25.0.2+10\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:PATH\"; Set-Location \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\mod\"; & \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\gradle-9.4.1\\\\bin\\\\gradle.bat\" build -q --no-daemon 2>&1)"
     ]
   }
 }

@@ -12,7 +12,7 @@
     "client": ["com.valorantmc.mod.ValorantMCClientMod"]
   },
   "depends": {
-    "fabricloader": ">=0.15.0",
+    "fabricloader": ">=0.19.0",
     "fabric-api":   "*",
     "minecraft":    "~1.21"
   }

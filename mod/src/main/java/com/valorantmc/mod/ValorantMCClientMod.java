@@ -8,36 +8,27 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 
-/**
- * Client-side entrypoint.
- *
- * Responsibilities:
- *  1. Register Valorant keybindings and relay them as server commands.
- *  2. Receive HUD/buy-menu/radar packets and update local state.
- *  3. Render Valorant HUD overlay + crosshair.
- *  4. Open the buy screen when B is pressed during buy phase.
- *  5. Announce mod presence to the server on join.
- */
 @Environment(EnvType.CLIENT)
 public class ValorantMCClientMod implements ClientModInitializer {
 
     private static final String CATEGORY = "key.categories.valorantmc";
 
-    static KeyBinding KEY_SHOP;
-    static KeyBinding KEY_RELOAD;
-    static KeyBinding KEY_AGENT;
-    static KeyBinding KEY_DROPSPIKE;
-    static KeyBinding KEY_WALK;
-    static KeyBinding KEY_ABILITY_C;
-    static KeyBinding KEY_ABILITY_Q;
-    static KeyBinding KEY_ABILITY_E;
-    static KeyBinding KEY_ULT;
-    static KeyBinding KEY_ADMIN;
+    static KeyMapping KEY_SHOP;
+    static KeyMapping KEY_RELOAD;
+    static KeyMapping KEY_AGENT;
+    static KeyMapping KEY_DROPSPIKE;
+    static KeyMapping KEY_WALK;
+    static KeyMapping KEY_ABILITY_C;
+    static KeyMapping KEY_ABILITY_Q;
+    static KeyMapping KEY_ABILITY_E;
+    static KeyMapping KEY_ULT;
+    static KeyMapping KEY_ADMIN;
+    static KeyMapping KEY_MAP;
 
     @Override
     public void onInitializeClient() {
@@ -46,15 +37,14 @@ public class ValorantMCClientMod implements ClientModInitializer {
         registerHud();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player == null || client.currentScreen != null) return;
+            if (client.player == null || client.screen != null) return;
 
-            // Buy key: open GUI during buy phase, send command otherwise
-            if (KEY_SHOP.wasPressed()) {
+            if (KEY_SHOP.consumeClick()) {
                 if (ValorantHudState.roundPhase == 1) {
                     client.execute(() -> client.setScreen(
                             new BuyScreen(null, ValorantHudState.credits)));
                 } else {
-                    client.player.networkHandler.sendCommand("vshop");
+                    client.player.connection.sendCommand("vshop");
                 }
             }
 
@@ -67,6 +57,15 @@ public class ValorantMCClientMod implements ClientModInitializer {
             checkKey(client, KEY_ABILITY_E, "vuse E");
             checkKey(client, KEY_ULT,       "vuse X");
             checkKey(client, KEY_ADMIN,     "vadmin");
+
+            if (KEY_MAP.consumeClick()) {
+                if (ValorantHudState.mapList != null && !ValorantHudState.mapList.isEmpty()) {
+                    client.execute(() -> client.setScreen(
+                            new MapSelectScreen(ValorantHudState.mapList, ValorantHudState.currentMap)));
+                } else {
+                    client.player.connection.sendCommand("vmap list");
+                }
+            }
         });
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ValorantHudState.clear());
@@ -85,24 +84,24 @@ public class ValorantMCClientMod implements ClientModInitializer {
         KEY_ABILITY_E = reg("key.valorantmc.ability_e", GLFW.GLFW_KEY_V);
         KEY_ULT       = reg("key.valorantmc.ult",       GLFW.GLFW_KEY_X);
         KEY_ADMIN     = reg("key.valorantmc.admin",     GLFW.GLFW_KEY_KP_0);
+        KEY_MAP       = reg("key.valorantmc.map",       GLFW.GLFW_KEY_M);
     }
 
-    private static KeyBinding reg(String id, int glfwKey) {
+    private static KeyMapping reg(String id, int glfwKey) {
         return KeyBindingHelper.registerKeyBinding(
-                new KeyBinding(id, InputUtil.Type.KEYSYM, glfwKey, CATEGORY));
+                new KeyMapping(id, InputConstants.Type.KEYSYM, glfwKey, CATEGORY));
     }
 
-    private static void checkKey(MinecraftClient client, KeyBinding kb, String command) {
-        while (kb.wasPressed()) {
+    private static void checkKey(Minecraft client, KeyMapping kb, String command) {
+        while (kb.consumeClick()) {
             assert client.player != null;
-            client.player.networkHandler.sendCommand(command);
+            client.player.connection.sendCommand(command);
         }
     }
 
     // ── Networking ────────────────────────────────────────────────────────────
 
     private void registerNetworking() {
-        // HUD state
         ClientPlayNetworking.registerGlobalReceiver(HudPayload.TYPE, (payload, context) ->
             context.client().execute(() -> {
                 ValorantHudState.active          = payload.active();
@@ -129,32 +128,55 @@ public class ValorantMCClientMod implements ClientModInitializer {
                 ValorantHudState.teamRoster      = payload.teamRoster();
                 String kf = payload.killFeed();
                 if (!kf.isEmpty()) {
-                    ValorantHudState.killFeed       = kf;
+                    ValorantHudState.killFeed        = kf;
                     ValorantHudState.killFeedShownAt = System.currentTimeMillis();
                 }
             })
         );
 
-        // Buy menu state
         ClientPlayNetworking.registerGlobalReceiver(BuyMenuPayload.TYPE, (payload, context) ->
             context.client().execute(() -> {
                 ValorantHudState.credits    = payload.credits();
                 ValorantHudState.inBuyPhase = payload.inBuyPhase();
-                if (payload.inBuyPhase() && context.client().currentScreen == null) {
+                if (payload.inBuyPhase() && context.client().screen == null) {
                     context.client().setScreen(
                             new BuyScreen(null, payload.credits()));
                 }
             })
         );
 
-        // Radar / minimap data
         ClientPlayNetworking.registerGlobalReceiver(RadarPayload.TYPE, (payload, context) ->
             context.client().execute(() ->
                 ValorantHudState.radarData = payload.data()
             )
         );
 
-        // Announce mod presence on join
+        ClientPlayNetworking.registerGlobalReceiver(AgentSelectPayload.TYPE, (payload, context) ->
+            context.client().execute(() -> {
+                ValorantHudState.agentSelectList = payload.availableAgents();
+                ValorantHudState.mySelectedAgent  = payload.myAgent();
+                if (context.client().screen == null || !(context.client().screen instanceof AgentSelectScreen)) {
+                    context.client().setScreen(new AgentSelectScreen(
+                            payload.availableAgents(), payload.myAgent()));
+                }
+            })
+        );
+
+        ClientPlayNetworking.registerGlobalReceiver(MapSelectPayload.TYPE, (payload, context) ->
+            context.client().execute(() -> {
+                ValorantHudState.mapList    = payload.maps();
+                ValorantHudState.currentMap = payload.currentMap();
+            })
+        );
+
+        ClientPlayNetworking.registerGlobalReceiver(AdminSyncPayload.TYPE, (payload, context) ->
+            context.client().execute(() -> {
+                if (!(context.client().screen instanceof AdminScreen)) {
+                    context.client().setScreen(new AdminScreen(payload));
+                }
+            })
+        );
+
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
             ClientPlayNetworking.send(new HelloPayload("1.0.0"))
         );
@@ -163,22 +185,20 @@ public class ValorantMCClientMod implements ClientModInitializer {
     // ── HUD + Crosshair ───────────────────────────────────────────────────────
 
     private void registerHud() {
-        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.options.hudHidden) return;
-            if (client.currentScreen != null) return;
+        HudRenderCallback.EVENT.register((guiGraphics, tickCounter) -> {
+            Minecraft client = Minecraft.getInstance();
+            if (client.options.hideGui) return;
+            if (client.screen != null) return;
 
-            int W = client.getWindow().getScaledWidth();
-            int H = client.getWindow().getScaledHeight();
+            int W = client.getWindow().getGuiScaledWidth();
+            int H = client.getWindow().getGuiScaledHeight();
 
-            // Crosshair (always shown while in-game, replaces vanilla)
             if (client.player != null) {
-                CrosshairRenderer.render(drawContext, W, H);
+                CrosshairRenderer.render(guiGraphics, W, H);
             }
 
-            // Valorant HUD overlay (only during active game)
             if (ValorantHudState.active) {
-                ValorantHudRenderer.render(drawContext, W, H, tickDelta);
+                ValorantHudRenderer.render(guiGraphics, W, H);
             }
         });
     }

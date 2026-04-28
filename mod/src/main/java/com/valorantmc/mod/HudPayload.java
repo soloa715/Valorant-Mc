@@ -1,15 +1,10 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
-/**
- * Server → client packet carrying the current HUD state.
- *
- * Field order must match FabricChannelListener#buildHudPayload() exactly.
- */
 public record HudPayload(
         boolean active,
         int     health,
@@ -20,27 +15,27 @@ public record HudPayload(
         int     chargesC,
         int     chargesQ,
         int     chargesE,
-        int     cooldownC,    // tenths of second remaining, 0 = ready
+        int     cooldownC,
         int     cooldownQ,
         int     cooldownE,
         int     ultProgress,
         int     ultMax,
-        String  agentName,    // max 64 chars
+        String  agentName,
         int     credits,
         int     atkScore,
         int     defScore,
-        int     spikeState,   // 0=none,1=planted,2=defusing
+        int     spikeState,
         int     spikeTimerTicks,
-        int     roundPhase,   // 0=inactive,1=buy,2=active,3=end
-        String  teamRoster,   // "Name:HP:Shield:Agent,..." max 512
-        String  killFeed      // "Killer>Victim" max 64
-) implements CustomPayload {
+        int     roundPhase,
+        String  teamRoster,
+        String  killFeed
+) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<HudPayload> TYPE =
-            new CustomPayload.Id<>(Identifier.of(ValorantMCMod.MOD_ID, "hud"));
+    public static final CustomPacketPayload.Type<HudPayload> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "hud"));
 
-    public static final PacketCodec<RegistryByteBuf, HudPayload> CODEC = PacketCodec.of(
-            (value, buf) -> {
+    public static final StreamCodec<RegistryFriendlyByteBuf, HudPayload> CODEC = StreamCodec.of(
+            (buf, value) -> {
                 buf.writeBoolean(value.active());
                 buf.writeVarInt(value.health());
                 buf.writeVarInt(value.shield());
@@ -55,43 +50,29 @@ public record HudPayload(
                 buf.writeVarInt(value.cooldownE());
                 buf.writeVarInt(value.ultProgress());
                 buf.writeVarInt(value.ultMax());
-                buf.writeString(value.agentName(), 64);
+                buf.writeUtf(value.agentName(), 64);
                 buf.writeVarInt(value.credits());
                 buf.writeVarInt(value.atkScore());
                 buf.writeVarInt(value.defScore());
                 buf.writeVarInt(value.spikeState());
                 buf.writeVarInt(value.spikeTimerTicks());
                 buf.writeVarInt(value.roundPhase());
-                buf.writeString(value.teamRoster(), 512);
-                buf.writeString(value.killFeed(), 64);
+                buf.writeUtf(value.teamRoster(), 512);
+                buf.writeUtf(value.killFeed(), 64);
             },
             buf -> new HudPayload(
                     buf.readBoolean(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readString(64),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readVarInt(),
-                    buf.readString(512),
-                    buf.readString(64)
+                    buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                    buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                    buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                    buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                    buf.readVarInt(), buf.readUtf(64), buf.readVarInt(),
+                    buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                    buf.readVarInt(), buf.readVarInt(),
+                    buf.readUtf(512), buf.readUtf(64)
             )
     );
 
     @Override
-    public CustomPayload.Id<? extends CustomPayload> getId() { return TYPE; }
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
 }

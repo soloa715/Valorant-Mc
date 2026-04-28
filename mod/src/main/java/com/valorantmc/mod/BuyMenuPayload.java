@@ -1,24 +1,20 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
-/** Server → client: current credits + whether buy phase is open. */
-public record BuyMenuPayload(int credits, boolean inBuyPhase) implements CustomPayload {
+public record BuyMenuPayload(int credits, boolean inBuyPhase) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<BuyMenuPayload> TYPE =
-            new CustomPayload.Id<>(Identifier.of(ValorantMCMod.MOD_ID, "buymenu"));
+    public static final CustomPacketPayload.Type<BuyMenuPayload> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "buymenu"));
 
-    public static final PacketCodec<RegistryByteBuf, BuyMenuPayload> CODEC = PacketCodec.of(
-            (value, buf) -> {
-                buf.writeVarInt(value.credits());
-                buf.writeBoolean(value.inBuyPhase());
-            },
+    public static final StreamCodec<RegistryFriendlyByteBuf, BuyMenuPayload> CODEC = StreamCodec.of(
+            (buf, value) -> { buf.writeVarInt(value.credits()); buf.writeBoolean(value.inBuyPhase()); },
             buf -> new BuyMenuPayload(buf.readVarInt(), buf.readBoolean())
     );
 
     @Override
-    public CustomPayload.Id<? extends CustomPayload> getId() { return TYPE; }
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
 }

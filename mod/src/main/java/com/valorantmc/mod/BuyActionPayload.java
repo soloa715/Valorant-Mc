@@ -1,21 +1,20 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
-/** Client → server: player purchased a weapon by name. */
-public record BuyActionPayload(String weaponName) implements CustomPayload {
+public record BuyActionPayload(String weaponName) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<BuyActionPayload> TYPE =
-            new CustomPayload.Id<>(Identifier.of(ValorantMCMod.MOD_ID, "buyaction"));
+    public static final CustomPacketPayload.Type<BuyActionPayload> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "buyaction"));
 
-    public static final PacketCodec<RegistryByteBuf, BuyActionPayload> CODEC = PacketCodec.of(
-            (value, buf) -> buf.writeString(value.weaponName(), 32),
-            buf -> new BuyActionPayload(buf.readString(32))
+    public static final StreamCodec<RegistryFriendlyByteBuf, BuyActionPayload> CODEC = StreamCodec.of(
+            (buf, value) -> buf.writeUtf(value.weaponName(), 32),
+            buf -> new BuyActionPayload(buf.readUtf(32))
     );
 
     @Override
-    public CustomPayload.Id<? extends CustomPayload> getId() { return TYPE; }
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
 }

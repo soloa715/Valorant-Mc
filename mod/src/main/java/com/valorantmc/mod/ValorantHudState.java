@@ -63,6 +63,12 @@ public final class ValorantHudState {
     // Buy menu
     public static volatile boolean inBuyPhase = false;
 
+    // Agent / Map selection
+    public static volatile java.util.List<String> agentSelectList = java.util.List.of();
+    public static volatile String mySelectedAgent = "";
+    public static volatile java.util.List<String> mapList    = java.util.List.of();
+    public static volatile String currentMap = "";
+
     public static void clear() {
         active = false;
         health = 100; shield = 0;
