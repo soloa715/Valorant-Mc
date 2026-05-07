@@ -39,11 +39,6 @@ public class EconomyManager {
         return getCredits(uuid) >= cost;
     }
 
-    public void clearPlayer(UUID uuid) {
-        credits.remove(uuid);
-        vpBalance.remove(uuid);
-    }
-
     // ── VP ────────────────────────────────────────────────────────────────────
 
     public int  getVP(UUID uuid)             { return vpBalance.getOrDefault(uuid, 0); }
@@ -59,13 +54,34 @@ public class EconomyManager {
 
     // ── Reset for new round ───────────────────────────────────────────────────
 
-    /** Give round-start credits: 5000 for round 1, otherwise loss bonus or win bonus. */
+    // consecutive loss streaks per player (0 = won last round)
+    private final Map<UUID, Integer> lossStreak = new HashMap<>();
+
+    /** Give round-start credits matching Valorant's loss-streak bonus system. */
     public void giveRoundStartCredits(UUID uuid, boolean wonLastRound, int roundNumber) {
         if (roundNumber == 1) {
             setCredits(uuid, 800);
+            lossStreak.put(uuid, 0);
             return;
         }
-        int bonus = wonLastRound ? 3000 : 1900;
-        addCredits(uuid, bonus);
+        if (wonLastRound) {
+            lossStreak.put(uuid, 0);
+            addCredits(uuid, 3000);
+        } else {
+            int streak = lossStreak.merge(uuid, 1, Integer::sum);
+            int bonus = switch (Math.min(streak, 4)) {
+                case 1 -> 1900;
+                case 2 -> 2400;
+                case 3 -> 2900;
+                default -> 2900;
+            };
+            addCredits(uuid, bonus);
+        }
+    }
+
+    public void clearPlayer(UUID uuid) {
+        credits.remove(uuid);
+        vpBalance.remove(uuid);
+        lossStreak.remove(uuid);
     }
 }

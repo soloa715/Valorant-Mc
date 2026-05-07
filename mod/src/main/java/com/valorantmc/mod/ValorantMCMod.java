@@ -48,7 +48,8 @@ public class ValorantMCMod implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(RadarPayload.TYPE,       RadarPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(AgentSelectPayload.TYPE, AgentSelectPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(MapSelectPayload.TYPE,   MapSelectPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(AdminSyncPayload.TYPE,   AdminSyncPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(AdminSyncPayload.TYPE,    AdminSyncPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(ScoreboardPayload.TYPE,  ScoreboardPayload.CODEC);
 
         // ── Server-side game manager ───────────────────────────────────────────
         ValorantServer.init();

@@ -89,6 +89,31 @@ public class BuyScreen extends Screen {
             rowOffset += rows;
         }
 
+        // ── Shields ───────────────────────────────────────────────────────────
+        int shieldY = startY + rowOffset * (btnH + 4) + CAT_LABELS.length * 14;
+        int sx = startX;
+        Button lightShield = Button.builder(Component.literal("Light Shield ¢400"), b -> purchase("light_shield"))
+                .bounds(sx, shieldY, btnW, btnH).build();
+        lightShield.active = credits >= 400;
+        addRenderableWidget(lightShield);
+
+        Button heavyShield = Button.builder(Component.literal("Heavy Shield ¢1000"), b -> purchase("heavy_shield"))
+                .bounds(sx + btnW + 4, shieldY, btnW, btnH).build();
+        heavyShield.active = credits >= 1000;
+        addRenderableWidget(heavyShield);
+
+        // ── Abilities ─────────────────────────────────────────────────────────
+        int abilY = shieldY + btnH + 8;
+        Button abilC = Button.builder(Component.literal("Ability C ¢200"), b -> purchase("ability_c"))
+                .bounds(sx, abilY, btnW, btnH).build();
+        abilC.active = credits >= 200;
+        addRenderableWidget(abilC);
+
+        Button abilQ = Button.builder(Component.literal("Ability Q ¢200"), b -> purchase("ability_q"))
+                .bounds(sx + btnW + 4, abilY, btnW, btnH).build();
+        abilQ.active = credits >= 200;
+        addRenderableWidget(abilQ);
+
         addRenderableWidget(Button.builder(Component.literal("Close [ESC]"), b -> close())
                 .bounds(width / 2 - 40, height - 28, 80, 20)
                 .build());
@@ -127,6 +152,11 @@ public class BuyScreen extends Screen {
             int rows = (int) Math.ceil((double)(CAT_END[cat] - CAT_START[cat]) / cols);
             rowOffset += rows;
         }
+
+        // Shields and ability labels
+        int finalY = startY + rowOffset * (btnH + 4) + CAT_LABELS.length * 14;
+        ctx.drawString(font, Component.literal("— Shields —"), startX, finalY - 10, COLOR_TEXT, false);
+        ctx.drawString(font, Component.literal("— Abilities —"), startX, finalY + btnH + 2, COLOR_TEXT, false);
 
         super.render(ctx, mouseX, mouseY, delta);
     }

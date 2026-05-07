@@ -97,10 +97,30 @@ public class ValorantCommands {
                 .then(Commands.literal("open")
                         .executes(ValorantCommands::cmdMapOpen)));
 
+        // /vscoreboard
+        dispatcher.register(Commands.literal("vscoreboard")
+                .executes(ValorantCommands::cmdScoreboard));
+
+        // /vspec  — cycle through spectating alive teammates when dead
+        dispatcher.register(Commands.literal("vspec")
+                .executes(ValorantCommands::cmdSpec));
+
         // /vadmin  — sends AdminSyncPayload to the requesting player (op only)
         dispatcher.register(Commands.literal("vadmin")
                 .requires(src -> src.hasPermission(2))
                 .executes(ValorantCommands::cmdAdminOpen));
+
+        // /vsite add <a|b>  /  /vsite clear <a|b>  /  /vsite list
+        dispatcher.register(Commands.literal("vsite")
+                .requires(src -> src.hasPermission(2))
+                .then(Commands.literal("add")
+                        .then(Commands.argument("site", StringArgumentType.word())
+                                .executes(ctx -> cmdSiteAdd(ctx, StringArgumentType.getString(ctx, "site")))))
+                .then(Commands.literal("clear")
+                        .then(Commands.argument("site", StringArgumentType.word())
+                                .executes(ctx -> cmdSiteClear(ctx, StringArgumentType.getString(ctx, "site")))))
+                .then(Commands.literal("list")
+                        .executes(ValorantCommands::cmdSiteList)));
 
         // /vspawn add <atk|def>  /  /vspawn clear <atk|def>  /  /vspawn list
         dispatcher.register(Commands.literal("vspawn")
@@ -226,7 +246,9 @@ public class ValorantCommands {
     private static int cmdWalk(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer p = getPlayer(ctx);
         if (p == null) return 0;
-        p.displayClientMessage(Component.literal("§7Walk mode toggled (not yet implemented)."), true);
+        ValorantGame g = ValorantServer.getInstance().getGame(p.getUUID());
+        if (g == null) { p.sendSystemMessage(Component.literal("§cNot in a game!")); return 0; }
+        g.toggleWalk(p);
         return 1;
     }
 
@@ -289,6 +311,49 @@ public class ValorantCommands {
         ServerPlayer p = getPlayer(ctx);
         if (p == null) return 0;
         ValorantServer.getInstance().quickPlay(p, ctx.getSource().getServer());
+        return 1;
+    }
+
+    private static int cmdSpec(CommandContext<CommandSourceStack> ctx) {
+        ServerPlayer p = getPlayer(ctx);
+        if (p == null) return 0;
+        ValorantGame g = ValorantServer.getInstance().getGame(p.getUUID());
+        if (g == null) return 0;
+        if (!g.isDeadOrSpectator(p)) {
+            p.sendSystemMessage(Component.literal("§cYou're not dead!")); return 0;
+        }
+        // Collect alive teammates
+        java.util.List<ServerPlayer> alive = new java.util.ArrayList<>();
+        for (ServerPlayer teammate : ctx.getSource().getServer().getPlayerList().getPlayers()) {
+            if (teammate == p) continue;
+            if (!g.isInGame(teammate.getUUID())) continue;
+            if (g.getTeam(p) != g.getTeam(teammate)) continue;
+            if (!g.isDeadOrSpectator(teammate)) alive.add(teammate);
+        }
+        if (alive.isEmpty()) { p.sendSystemMessage(Component.literal("§7No alive teammates to spectate.")); return 0; }
+        // Cycle: find currently watched target, advance to next
+        net.minecraft.world.entity.Entity current = p.getCamera();
+        int idx = 0;
+        for (int i = 0; i < alive.size(); i++) {
+            if (alive.get(i).equals(current)) { idx = (i + 1) % alive.size(); break; }
+        }
+        p.setCamera(alive.get(idx));
+        p.sendSystemMessage(Component.literal("§7Spectating §f" + alive.get(idx).getName().getString()));
+        return 1;
+    }
+
+    private static int cmdScoreboard(CommandContext<CommandSourceStack> ctx) {
+        ServerPlayer p = getPlayer(ctx);
+        if (p == null) return 0;
+        ValorantGame g = ValorantServer.getInstance().getGame(p.getUUID());
+        if (g == null) { p.sendSystemMessage(Component.literal("§cNot in a game!")); return 0; }
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p,
+                new com.valorantmc.mod.ScoreboardPayload(
+                        g.buildScoreboardRows(ctx.getSource().getServer()),
+                        g.getAttackers().getRoundWins(),
+                        g.getDefenders().getRoundWins(),
+                        g.getCurrentRound(),
+                        g.getState().name()));
         return 1;
     }
 
@@ -390,6 +455,49 @@ public class ValorantCommands {
 
     private static String fmt(net.minecraft.world.phys.Vec3 v) {
         return String.format("%.1f, %.1f, %.1f", v.x, v.y, v.z);
+    }
+
+    // ── /vsite ────────────────────────────────────────────────────────────────
+
+    private static int cmdSiteAdd(CommandContext<CommandSourceStack> ctx, String site) {
+        ServerPlayer p = getPlayer(ctx);
+        if (p == null) return 0;
+        boolean isA = site.equalsIgnoreCase("a");
+        boolean isB = site.equalsIgnoreCase("b");
+        if (!isA && !isB) {
+            ctx.getSource().sendFailure(Component.literal("§cUse: /vsite add a  or  /vsite add b"));
+            return 0;
+        }
+        net.minecraft.world.phys.Vec3 pos = p.position();
+        BombSiteManager.getInstance().setSite(isA, pos);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§a" + (isA ? "A" : "B") + " bomb site §7set at §f" + fmt(pos)), true);
+        return 1;
+    }
+
+    private static int cmdSiteClear(CommandContext<CommandSourceStack> ctx, String site) {
+        boolean isA = site.equalsIgnoreCase("a");
+        boolean isB = site.equalsIgnoreCase("b");
+        if (!isA && !isB) {
+            ctx.getSource().sendFailure(Component.literal("§cUse: /vsite clear a  or  /vsite clear b"));
+            return 0;
+        }
+        BombSiteManager.getInstance().clearSite(isA);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§7Site §e" + (isA ? "A" : "B") + " §7cleared."), true);
+        return 1;
+    }
+
+    private static int cmdSiteList(CommandContext<CommandSourceStack> ctx) {
+        BombSiteManager bsm = BombSiteManager.getInstance();
+        ctx.getSource().sendSuccess(() -> Component.literal("§e--- Bomb Sites ---"), false);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§eA: §7" + (bsm.getSiteA() != null ? fmt(bsm.getSiteA()) : "§8not set")), false);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§eB: §7" + (bsm.getSiteB() != null ? fmt(bsm.getSiteB()) : "§8not set")), false);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§7Plant radius: §f8 blocks §8| Use §b/vsite add a §8at site center"), false);
+        return 1;
     }
 
     // ── /vmap ─────────────────────────────────────────────────────────────────

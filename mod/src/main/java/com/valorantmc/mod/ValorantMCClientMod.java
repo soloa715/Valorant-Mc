@@ -29,6 +29,7 @@ public class ValorantMCClientMod implements ClientModInitializer {
     static KeyMapping KEY_ULT;
     static KeyMapping KEY_ADMIN;
     static KeyMapping KEY_MAP;
+    static KeyMapping KEY_SCOREBOARD;
 
     @Override
     public void onInitializeClient() {
@@ -58,6 +59,12 @@ public class ValorantMCClientMod implements ClientModInitializer {
             checkKey(client, KEY_ULT,       "vuse X");
             checkKey(client, KEY_ADMIN,     "vadmin");
 
+            if (KEY_SCOREBOARD.consumeClick()) {
+                // If dead/spectator, cycle spectate target; otherwise show scoreboard
+                boolean isSpectator = client.player.isSpectator();
+                client.player.connection.sendCommand(isSpectator ? "vspec" : "vscoreboard");
+            }
+
             if (KEY_MAP.consumeClick()) {
                 if (ValorantHudState.mapList != null && !ValorantHudState.mapList.isEmpty()) {
                     client.execute(() -> client.setScreen(
@@ -83,8 +90,9 @@ public class ValorantMCClientMod implements ClientModInitializer {
         KEY_ABILITY_Q = reg("key.valorantmc.ability_q", GLFW.GLFW_KEY_C);
         KEY_ABILITY_E = reg("key.valorantmc.ability_e", GLFW.GLFW_KEY_V);
         KEY_ULT       = reg("key.valorantmc.ult",       GLFW.GLFW_KEY_X);
-        KEY_ADMIN     = reg("key.valorantmc.admin",     GLFW.GLFW_KEY_KP_0);
-        KEY_MAP       = reg("key.valorantmc.map",       GLFW.GLFW_KEY_M);
+        KEY_ADMIN      = reg("key.valorantmc.admin",      GLFW.GLFW_KEY_KP_0);
+        KEY_MAP        = reg("key.valorantmc.map",        GLFW.GLFW_KEY_M);
+        KEY_SCOREBOARD = reg("key.valorantmc.scoreboard", GLFW.GLFW_KEY_TAB);
     }
 
     private static KeyMapping reg(String id, int glfwKey) {
@@ -175,6 +183,12 @@ public class ValorantMCClientMod implements ClientModInitializer {
                     context.client().setScreen(new AdminScreen(payload));
                 }
             })
+        );
+
+        ClientPlayNetworking.registerGlobalReceiver(ScoreboardPayload.TYPE, (payload, context) ->
+            context.client().execute(() ->
+                context.client().setScreen(new ScoreboardScreen(payload))
+            )
         );
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->

@@ -46,7 +46,8 @@
       "WebFetch(domain:maven.fabricmc.net)",
       "Bash(\"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\gradle-9.4.1\\\\bin\\\\gradle.bat\" build *)",
       "Bash(set \"JAVA_HOME=C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\jdk25\\\\jdk-25.0.2+10\")",
-      "PowerShell($env:JAVA_HOME = \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\jdk25\\\\jdk-25.0.2+10\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:PATH\"; Set-Location \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\mod\"; & \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\gradle-9.4.1\\\\bin\\\\gradle.bat\" build -q --no-daemon 2>&1)"
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\jdk25\\\\jdk-25.0.2+10\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:PATH\"; Set-Location \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\mod\"; & \"C:\\\\Users\\\\solo\\\\Documents\\\\GitHub\\\\Valorant-Mc\\\\tools\\\\gradle-9.4.1\\\\bin\\\\gradle.bat\" build -q --no-daemon 2>&1)",
+      "Bash(xargs -I {} basename {})"
     ]
   }
 }

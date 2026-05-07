@@ -3,6 +3,7 @@ package com.valorantmc.mod.server;
 import com.valorantmc.mod.BuyMenuPayload;
 import com.valorantmc.mod.HudPayload;
 import com.valorantmc.mod.RadarPayload;
+import com.valorantmc.mod.ScoreboardPayload;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
@@ -52,6 +53,11 @@ public class ValorantGame {
     // ── Economy ───────────────────────────────────────────────────────────────
     private final EconomyManager economy = new EconomyManager();
 
+    // ── Per-player match stats ────────────────────────────────────────────────
+    private final Map<UUID, Integer> statKills   = new HashMap<>();
+    private final Map<UUID, Integer> statDeaths  = new HashMap<>();
+    private final Map<UUID, Integer> statAssists = new HashMap<>();
+
     // ── Spike state ───────────────────────────────────────────────────────────
     private UUID    spikeCarrier    = null;
     private boolean spikePlanted    = false;
@@ -59,6 +65,9 @@ public class ValorantGame {
     private UUID    spikeDefuser    = null;
     private int     defuseTicks     = 0;
     private Vec3    spikePlantPos   = null;
+
+    // ── Dropped weapons (item entity UUID → weapon type + level) ─────────────
+    private final Map<UUID, net.minecraft.world.entity.item.ItemEntity> droppedWeapons = new LinkedHashMap<>();
 
     // ── Kill feed ─────────────────────────────────────────────────────────────
     private final Map<UUID, String> pendingKillFeed = new HashMap<>();
@@ -97,6 +106,7 @@ public class ValorantGame {
     public void removePlayer(ServerPlayer p) {
         attackers.removePlayer(p);
         defenders.removePlayer(p);
+        AgentAbilities.cleanup(p.getUUID());
         playerAgents.remove(p.getUUID());
         playerWeapons.remove(p.getUUID());
         shotCooldown.remove(p.getUUID());
@@ -192,6 +202,10 @@ public class ValorantGame {
             radarTick = 0;
             sendRadarToAll(server);
         }
+        if (++pickupTick >= 5) {
+            pickupTick = 0;
+            checkWeaponPickups(server);
+        }
     }
 
     // ── Phase ticks ───────────────────────────────────────────────────────────
@@ -248,7 +262,12 @@ public class ValorantGame {
             defuseTicks--;
             if (defuseTicks <= 0) {
                 spikePlanted   = false;
+                UUID defuserUuid = spikeDefuser;
                 spikeDefuser   = null;
+                if (defuserUuid != null) {
+                    String defuserAgent = playerAgents.get(defuserUuid);
+                    if (defuserAgent != null) AgentAbilities.addUltPoint(defuserUuid, defuserAgent);
+                }
                 endRound(server, defenders.getSide(), "§b§lSPIKE DEFUSED §r§7— Defenders win!");
                 return;
             }
@@ -313,8 +332,14 @@ public class ValorantGame {
             economy.giveRoundStartCredits(uuid, won, currentRound);
             playerHealth.put(uuid, 100);
             playerShield.put(uuid, 0);
+            String agent = playerAgents.get(uuid);
+            if (agent != null) AgentAbilities.initRound(uuid, agent);
         }
 
+        walkMode.clear();
+        AgentAbilities.cleanupRound(server);
+        droppedWeapons.values().forEach(e -> { if (e.isAlive()) e.discard(); });
+        droppedWeapons.clear();
         giveStartingWeapons(server);
         teleportToSpawns(server);
 
@@ -357,6 +382,12 @@ public class ValorantGame {
         broadcast(server, message);
         broadcast(server, "§7Score — §cAttackers §f" + attackers.getRoundWins()
                 + " §8: §f" + defenders.getRoundWins() + " §bDefenders");
+
+        // Auto-send scoreboard to all players at round end
+        List<String> sbRows = buildScoreboardRows(server);
+        ScoreboardPayload sb = new ScoreboardPayload(
+                sbRows, attackers.getRoundWins(), defenders.getRoundWins(), currentRound, state.name());
+        getAllPlayers(server).forEach(p -> ServerPlayNetworking.send(p, sb));
 
         sendTitle(server,
                 winningSide == ValorantTeam.Side.ATTACKERS ? "§cATTACKERS WIN" : "§bDEFENDERS WIN",
@@ -417,20 +448,61 @@ public class ValorantGame {
                 + " > " + victim.getName().getString() + (headshot ? " [HS]" : "");
         getAllUuids().forEach(uid -> pendingKillFeed.put(uid, feedMsg));
 
+        dropWeaponEntity(victim);
         victim.setGameMode(GameType.SPECTATOR);
-        victim.sendSystemMessage(Component.literal("§cYou were eliminated!"));
+        victim.sendSystemMessage(Component.literal("§cYou were eliminated! §8(press Tab to spectate teammates)"));
 
+        statDeaths.merge(victim.getUUID(), 1, Integer::sum);
         if (killer != null) {
             killer.displayClientMessage(Component.literal("§aKill! §8+" + (headshot ? "HS " : "") + "(+" + 200 + "c)"), true);
             economy.addCredits(killer.getUUID(), 200);
+            statKills.merge(killer.getUUID(), 1, Integer::sum);
+            String killerAgent = playerAgents.get(killer.getUUID());
+            if (killerAgent != null) AgentAbilities.addUltPoint(killer.getUUID(), killerAgent);
         }
     }
 
     // ── Spike logic ───────────────────────────────────────────────────────────
 
+    // ── Walk mode ─────────────────────────────────────────────────────────────
+
+    private final Set<UUID> walkMode = new HashSet<>();
+
+    public void toggleWalk(ServerPlayer player) {
+        if (walkMode.contains(player.getUUID())) {
+            walkMode.remove(player.getUUID());
+            player.removeEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("§7Walk: §cOFF"), true);
+        } else {
+            walkMode.add(player.getUUID());
+            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, Integer.MAX_VALUE, 0, false, false));
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("§7Walk: §aON"), true);
+        }
+    }
+
+    public void clearWalk(UUID uuid) {
+        walkMode.remove(uuid);
+    }
+
+    // ── Spike plant ───────────────────────────────────────────────────────────
+
     public void plantSpike(ServerPlayer player, MinecraftServer server) {
         if (!attackers.contains(player)) return;
         if (spikePlanted) return;
+
+        // Bomb site validation (skip if no sites are configured)
+        BombSiteManager bsm = BombSiteManager.getInstance();
+        if (bsm.hasSites()) {
+            String site = bsm.getSiteAt(player.position());
+            if (site == null) {
+                player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                        "§cYou must be in a bomb site (A or B) to plant!"), true);
+                return;
+            }
+            broadcast(server, "§c§lSPIKE BEING PLANTED §8— §eSite " + site);
+        }
+
         spikeCarrier  = null;
         spikePlanted  = true;
         spikeDetonTicks = SPIKE_TICKS;
@@ -438,6 +510,9 @@ public class ValorantGame {
 
         broadcast(server, "§c§lSPIKE PLANTED at §f" + formatPos(player.position()));
         sendTitle(server, "§cSPIKE PLANTED", "§7Defuse it!", 5, 40, 15);
+
+        String planterAgent = playerAgents.get(player.getUUID());
+        if (planterAgent != null) AgentAbilities.addUltPoint(player.getUUID(), planterAgent);
     }
 
     public void startDefuse(ServerPlayer player) {
@@ -520,6 +595,26 @@ public class ValorantGame {
 
     // ── Shield ────────────────────────────────────────────────────────────────
 
+    private static final int ABILITY_C_COST = 200;
+    private static final int ABILITY_Q_COST = 200;
+
+    public boolean buyAbilityCharge(ServerPlayer player, String slot) {
+        if (state != GameState.BUY_PHASE) {
+            player.sendSystemMessage(Component.literal("§cBuy phase only!")); return false;
+        }
+        int cost = slot.equals("C") ? ABILITY_C_COST : ABILITY_Q_COST;
+        if (!economy.canAfford(player.getUUID(), cost)) {
+            player.sendSystemMessage(Component.literal("§cNeed §f" + cost + "c")); return false;
+        }
+        economy.spend(player.getUUID(), cost);
+        int[] ch = AgentAbilities.getCharges(player.getUUID());
+        int idx = slot.equals("C") ? 0 : 1;
+        if (ch[idx] < 0) ch[idx] = 0;
+        ch[idx]++;
+        player.sendSystemMessage(Component.literal("§aBought ability §f" + slot + " §7charge. §8(" + ch[idx] + " total)"));
+        return true;
+    }
+
     public boolean buyShield(ServerPlayer player, boolean heavy) {
         if (state != GameState.BUY_PHASE) { player.sendSystemMessage(Component.literal("§cBuy phase only!")); return false; }
         int cost = heavy ? 1000 : 400;
@@ -601,11 +696,18 @@ public class ValorantGame {
             if (kf == null) kf = "";
             if (kf.length() > 64) kf = kf.substring(0, 64);
 
+            int[] ch = AgentAbilities.getCharges(uid);
+            int chargesC  = ch[0];
+            int chargesQ  = ch[1];
+            int chargesE  = ch[2];
+            int ultPts    = AgentAbilities.getUltPoints(uid);
+            int ultMax    = agent.isEmpty() ? 7 : AgentAbilities.getUltMax(agent);
+
             HudPayload hud = new HudPayload(
                     true, hp, shield, ammo, maxAmmo, reserve,
+                    chargesC, chargesQ, chargesE,
                     0, 0, 0,
-                    0, 0, 0,
-                    0, 0,
+                    ultPts, ultMax,
                     agent.length() > 64 ? agent.substring(0, 64) : agent,
                     credits, atkScore, defScore,
                     spikeState, spikeTimer, roundPhase,
@@ -772,6 +874,46 @@ public class ValorantGame {
     public boolean      isSpikePlanted()   { return spikePlanted;                    }
     public UUID         getSpikeCarrier()  { return spikeCarrier;                    }
 
+    private void dropWeaponEntity(ServerPlayer victim) {
+        Map<WeaponCategory, Weapon> ws = playerWeapons.get(victim.getUUID());
+        if (ws == null) return;
+        // prefer dropping the primary weapon (rifle/smg/sniper/heavy/shotgun)
+        Weapon toDrop = null;
+        for (WeaponCategory cat : new WeaponCategory[]{
+                WeaponCategory.RIFLE, WeaponCategory.SMG, WeaponCategory.SNIPER,
+                WeaponCategory.HEAVY, WeaponCategory.SHOTGUN}) {
+            if (ws.containsKey(cat)) { toDrop = ws.get(cat); break; }
+        }
+        if (toDrop == null || toDrop.getType().isMelee()) return;
+        net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(
+                victim.serverLevel(), victim.getX(), victim.getY() + 0.5, victim.getZ(), toDrop.toItemStack());
+        item.setPickUpDelay(40);
+        victim.serverLevel().addFreshEntity(item);
+        droppedWeapons.put(item.getUUID(), item);
+    }
+
+    private int pickupTick = 0;
+    private void checkWeaponPickups(MinecraftServer server) {
+        if (state != GameState.ROUND_ACTIVE || droppedWeapons.isEmpty()) return;
+        droppedWeapons.entrySet().removeIf(e -> !e.getValue().isAlive());
+
+        getAllPlayers(server).forEach(p -> {
+            if (isDeadOrSpectator(p)) return;
+            droppedWeapons.forEach((uid, ent) -> {
+                if (!ent.isAlive()) return;
+                if (p.distanceTo(ent) > 1.5) return;
+                net.minecraft.world.item.ItemStack stack = ent.getItem();
+                WeaponType wt = Weapon.getWeaponType(stack);
+                if (wt == null || wt.isMelee()) return;
+                Map<WeaponCategory, Weapon> ws = playerWeapons.computeIfAbsent(p.getUUID(), k -> new HashMap<>());
+                if (ws.containsKey(wt.getCategory())) return; // already has one in this slot
+                setWeapon(p, new Weapon(wt));
+                ent.discard();
+                p.displayClientMessage(Component.literal("§a⬆ Picked up §f" + wt.getDisplayName()), true);
+            });
+        });
+    }
+
     public void giveWeapon(ServerPlayer player, Weapon weapon) { setWeapon(player, weapon); }
     public void heal(UUID uuid, int amount) {
         int hp = Math.min(100, playerHealth.getOrDefault(uuid, 0) + amount);
@@ -860,6 +1002,24 @@ public class ValorantGame {
 
     public List<Vec3> getAttackerSpawnsCopy() { return Collections.unmodifiableList(attackerSpawns); }
     public List<Vec3> getDefenderSpawnsCopy() { return Collections.unmodifiableList(defenderSpawns); }
+
+    /** Build scoreboard row strings: "name:agent:kills:deaths:assists:credits:team:alive" */
+    public List<String> buildScoreboardRows(MinecraftServer server) {
+        List<String> rows = new ArrayList<>();
+        for (UUID uid : getAllUuids()) {
+            String name   = getPlayerName(server, uid);
+            String agent  = playerAgents.getOrDefault(uid, "?");
+            int kills     = statKills.getOrDefault(uid, 0);
+            int deaths    = statDeaths.getOrDefault(uid, 0);
+            int assists   = statAssists.getOrDefault(uid, 0);
+            int credits   = economy.getCredits(uid);
+            String team   = attackers.contains(uid) ? "ATTACKERS" : "DEFENDERS";
+            boolean alive = !attackers.isDead(uid) && !defenders.isDead(uid);
+            rows.add(name + ":" + agent + ":" + kills + ":" + deaths + ":" + assists
+                    + ":" + credits + ":" + team + ":" + (alive ? "1" : "0"));
+        }
+        return rows;
+    }
 
     /** Revive one dead ally closest to the given player. Returns list of revived players. */
     public List<ServerPlayer> reviveDeadAlly(ServerPlayer caster) {

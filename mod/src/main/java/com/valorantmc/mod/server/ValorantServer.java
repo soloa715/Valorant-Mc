@@ -152,6 +152,10 @@ public class ValorantServer {
                 g.buyShield(p, false);
             } else if (weaponName.equals("HEAVY_SHIELD") || weaponName.equals("HEAVY")) {
                 g.buyShield(p, true);
+            } else if (weaponName.equals("ABILITY_C")) {
+                g.buyAbilityCharge(p, "C");
+            } else if (weaponName.equals("ABILITY_Q")) {
+                g.buyAbilityCharge(p, "Q");
             } else {
                 p.sendSystemMessage(Component.literal("§cUnknown item: " + weaponName));
             }

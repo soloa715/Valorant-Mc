@@ -1,10 +1,13 @@
 package com.valorantmc.mod.server;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -22,6 +25,42 @@ public class AgentAbilities {
     private static final Map<UUID, Boolean>              chamberHasAnchor = new HashMap<>();
     private static final Map<UUID, Integer>              neonUltTimer     = new HashMap<>();
     private static final Map<UUID, Integer>              neonSpeedActive  = new HashMap<>();
+
+    // ── Ultimate point system ─────────────────────────────────────────────────
+    private static final Map<String, Integer> ULT_MAX = Map.ofEntries(
+        Map.entry("Jett", 7),      Map.entry("Reyna", 6),     Map.entry("Raze", 7),
+        Map.entry("Phoenix", 6),   Map.entry("Sova", 7),      Map.entry("Sage", 7),
+        Map.entry("Killjoy", 7),   Map.entry("Cypher", 7),    Map.entry("Omen", 7),
+        Map.entry("Viper", 7),     Map.entry("Brimstone", 8), Map.entry("Breach", 7),
+        Map.entry("Neon", 7),      Map.entry("Skye", 7),      Map.entry("Chamber", 8),
+        Map.entry("Fade", 8),      Map.entry("Gekko", 7)
+    );
+    private static final Map<UUID, Integer> ultPoints = new HashMap<>();
+
+    // ── Per-agent ability charge tracking ─────────────────────────────────────
+    // signature slot per agent (free charge per round)
+    private static final Map<String, String> SIG_SLOT = Map.ofEntries(
+        Map.entry("Jett", "E"),  Map.entry("Reyna", "E"),  Map.entry("Raze", "E"),
+        Map.entry("Phoenix", "E"),Map.entry("Sova", "E"),  Map.entry("Sage", "E"),
+        Map.entry("Killjoy", "E"),Map.entry("Cypher", "E"),Map.entry("Omen", "E"),
+        Map.entry("Viper", "E"), Map.entry("Brimstone", "E"),Map.entry("Breach", "E"),
+        Map.entry("Neon", "E"),  Map.entry("Skye", "C"),   Map.entry("Chamber", "E"),
+        Map.entry("Fade", "Q"),  Map.entry("Gekko", "Q")
+    );
+    // C/Q/E charges: -1 = slot unused, 0 = empty, N = count
+    private static final Map<UUID, int[]> abilityCharges = new HashMap<>(); // [C, Q, E]
+
+    // ── Persistent ability state ──────────────────────────────────────────────
+    private static final Map<UUID, Vec3>        killjoyTurrets    = new HashMap<>();
+    private static final Map<UUID, Integer>     killjoyTurretFire = new HashMap<>();
+
+    private static final Map<UUID, List<BlockPos>> sageWalls     = new HashMap<>();
+    private static final Map<UUID, ServerLevel>    sageWallLevel  = new HashMap<>();
+    private static final Map<UUID, Integer>        sageWallTimer  = new HashMap<>();
+
+    // int[] = {x, y, z, remainingTicks}
+    private static final Map<UUID, List<int[]>>  brimSmokeZones  = new HashMap<>();
+    private static final Map<UUID, ServerLevel>  brimSmokeLvl    = new HashMap<>();
 
     // ── Tick (called from ValorantServer.tick) ────────────────────────────────
 
@@ -70,6 +109,152 @@ public class AgentAbilities {
             }
         });
         neonUltTimer.entrySet().removeIf(e -> e.getValue() == 0);
+
+        // Killjoy Turret fire every 30 ticks
+        for (UUID uuid : new ArrayList<>(killjoyTurretFire.keySet())) {
+            int t = killjoyTurretFire.merge(uuid, 1, Integer::sum);
+            if (t % 30 != 0) continue;
+            ServerPlayer owner = server.getPlayerList().getPlayer(uuid);
+            if (owner == null) continue;
+            ValorantGame game = ValorantServer.getInstance().getGame(uuid);
+            if (game == null) continue;
+            Vec3 pos = killjoyTurrets.get(uuid);
+            if (pos == null) continue;
+            ServerPlayer target = null;
+            double best = 400.0;
+            for (ServerPlayer e : owner.level().getEntitiesOfClass(ServerPlayer.class,
+                    new AABB(pos, pos).inflate(20),
+                    ep -> !ep.isSpectator() && game.isInGame(ep.getUUID()) && game.getTeam(owner) != game.getTeam(ep))) {
+                double d = e.distanceToSqr(pos.x, pos.y, pos.z);
+                if (d < best) { best = d; target = e; }
+            }
+            if (target != null) {
+                game.applyDamage(owner, target, 30, false, false);
+                owner.displayClientMessage(Component.literal("§e⚡ Turret hit §f" + target.getName().getString()), true);
+            }
+        }
+
+        // Sage wall expiry
+        for (UUID uuid : new ArrayList<>(sageWallTimer.keySet())) {
+            int t = sageWallTimer.merge(uuid, -1, Integer::sum);
+            if (t <= 0) {
+                sageWallTimer.remove(uuid);
+                List<BlockPos> wall = sageWalls.remove(uuid);
+                ServerLevel lvl = sageWallLevel.remove(uuid);
+                if (wall != null && lvl != null) {
+                    for (BlockPos bp : wall) lvl.setBlock(bp, Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+
+        // Brimstone smoke zones — reapply blindness each tick and expire
+        for (UUID uuid : new ArrayList<>(brimSmokeZones.keySet())) {
+            List<int[]> zones = brimSmokeZones.get(uuid);
+            if (zones == null || zones.isEmpty()) { brimSmokeZones.remove(uuid); brimSmokeLvl.remove(uuid); continue; }
+            ServerPlayer owner = server.getPlayerList().getPlayer(uuid);
+            ServerLevel lvl = brimSmokeLvl.get(uuid);
+            if (owner == null || lvl == null) { zones.clear(); continue; }
+            ValorantGame game = ValorantServer.getInstance().getGame(uuid);
+            if (game == null) { zones.clear(); continue; }
+            zones.removeIf(zone -> {
+                zone[3]--;
+                if (zone[3] <= 0) return true;
+                Vec3 center = new Vec3(zone[0] + 0.5, zone[1] + 0.5, zone[2] + 0.5);
+                for (ServerPlayer e : lvl.getEntitiesOfClass(ServerPlayer.class,
+                        new AABB(center, center).inflate(5.0),
+                        ep -> !ep.isSpectator() && game.isInGame(ep.getUUID()) && game.getTeam(owner) != game.getTeam(ep))) {
+                    e.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 30, 0, false, false));
+                }
+                return false;
+            });
+            if (zones.isEmpty()) { brimSmokeZones.remove(uuid); brimSmokeLvl.remove(uuid); }
+        }
+    }
+
+    // ── Ult point helpers (public so ValorantGame can award points) ────────────
+
+    public static int getUltPoints(UUID id)        { return ultPoints.getOrDefault(id, 0); }
+    public static int getUltMax(String agent)      { return ULT_MAX.getOrDefault(agent, 7); }
+
+    public static void addUltPoint(UUID id, String agent) {
+        ultPoints.put(id, Math.min(getUltMax(agent), getUltPoints(id) + 1));
+    }
+
+    private static boolean checkUlt(ServerPlayer p, String agent) {
+        int pts = getUltPoints(p.getUUID());
+        int max = getUltMax(agent);
+        if (pts < max) {
+            p.displayClientMessage(Component.literal("§cUlt not ready! §f" + pts + "/" + max + " §7kills"), true);
+            return false;
+        }
+        return true;
+    }
+
+    private static void consumeUlt(UUID id) { ultPoints.put(id, 0); }
+
+    // ── Ability charge helpers ────────────────────────────────────────────────
+
+    public static int[] getCharges(UUID id) {
+        return abilityCharges.computeIfAbsent(id, k -> new int[]{-1, -1, 1});
+    }
+
+    /** Called at round start: reset signature charge and give default C/Q charges */
+    public static void initRound(UUID id, String agent) {
+        int[] ch = new int[]{2, 2, 1};   // default: 2 C, 2 Q, 1 E (signature)
+        // agents with fewer charges
+        switch (agent) {
+            case "Skye" ->    { ch[0] = 1; ch[1] = 2; ch[2] = 2; }  // C=sig(1), Q=2, E=2
+            case "Chamber" -> { ch[0] = 2; ch[1] = 4; ch[2] = 1; }  // C=trap(2), Q=headhunter(4), E=rendezvous(1)
+            case "Fade" ->    { ch[0] = 2; ch[1] = 1; ch[2] = 2; }  // C=2, Q=sig(1), E=2
+            case "Gekko" ->   { ch[0] = 1; ch[1] = 1; ch[2] = 1; }
+            case "Viper" ->   { ch[0] = 2; ch[1] = 1; ch[2] = 1; }
+            case "Brimstone" -> { ch[0] = 3; ch[1] = 1; ch[2] = 1; }
+        }
+        abilityCharges.put(id, ch);
+        // reset ult points to 0 at match start only; for per-round keep them
+        // (ult points carry over between rounds in real Valorant)
+    }
+
+    /** Call when player leaves/disconnects */
+    public static void cleanup(UUID id) {
+        cooldowns.remove(id);
+        ultPoints.remove(id);
+        abilityCharges.remove(id);
+        bladeCharges.remove(id);
+        dismissTimer.remove(id);
+        reynaUltTimer.remove(id);
+        phoenixUltTimer.remove(id);
+        chamberAnchor.remove(id);
+        chamberHasAnchor.remove(id);
+        neonUltTimer.remove(id);
+        neonSpeedActive.remove(id);
+        killjoyTurrets.remove(id);
+        killjoyTurretFire.remove(id);
+        List<BlockPos> wall = sageWalls.remove(id);
+        ServerLevel lvl = sageWallLevel.remove(id);
+        if (wall != null && lvl != null) {
+            for (BlockPos bp : wall) lvl.setBlock(bp, Blocks.AIR.defaultBlockState(), 3);
+        }
+        sageWallTimer.remove(id);
+        brimSmokeZones.remove(id);
+        brimSmokeLvl.remove(id);
+    }
+
+    /** Call at round end to remove all persistent ability entities/blocks */
+    public static void cleanupRound(net.minecraft.server.MinecraftServer server) {
+        killjoyTurrets.clear();
+        killjoyTurretFire.clear();
+        for (Map.Entry<UUID, List<BlockPos>> entry : new ArrayList<>(sageWalls.entrySet())) {
+            ServerLevel lvl = sageWallLevel.get(entry.getKey());
+            if (lvl != null) {
+                for (BlockPos bp : entry.getValue()) lvl.setBlock(bp, Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+        sageWalls.clear();
+        sageWallLevel.clear();
+        sageWallTimer.clear();
+        brimSmokeZones.clear();
+        brimSmokeLvl.clear();
     }
 
     // ── Entry point ───────────────────────────────────────────────────────────
@@ -223,6 +408,8 @@ public class AgentAbilities {
     private static boolean jettBladeStorm(ServerPlayer p, ValorantGame game) {
         int charges = bladeCharges.getOrDefault(p.getUUID(), 0);
         if (charges == 0) {
+            if (!checkUlt(p, "Jett")) return false;
+            consumeUlt(p.getUUID());
             bladeCharges.put(p.getUUID(), 5);
             p.displayClientMessage(Component.literal("§6§lBLADE STORM! §r§75 blades ready — press §eX §7to throw"), true);
             return true;
@@ -281,11 +468,11 @@ public class AgentAbilities {
     }
 
     private static boolean reynaEmpress(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Empress")) return false;
+        if (!checkUlt(p, "Reyna")) return false;
+        consumeUlt(p.getUUID());
         p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 200, 1, false, false));
         p.addEffect(new MobEffectInstance(MobEffects.DIG_SPEED, 200, 1, false, false));
         reynaUltTimer.put(p.getUUID(), 200);
-        setcd(p.getUUID(), "X", 20 * 60);
         p.displayClientMessage(Component.literal("§d§lEMPRESS! §r§7Increased fire rate + speed for 10s"), true);
         return true;
     }
@@ -342,7 +529,8 @@ public class AgentAbilities {
     }
 
     private static boolean razeShowstopper(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Showstopper")) return false;
+        if (!checkUlt(p, "Raze")) return false;
+        consumeUlt(p.getUUID());
         Vec3 eye  = p.getEyePosition();
         Vec3 look = p.getLookAngle();
         Vec3 end  = eye.add(look.scale(20));
@@ -354,7 +542,6 @@ public class AgentAbilities {
             game.applyDamage(p, e, 150, false, false);
             hits++;
         }
-        setcd(p.getUUID(), "X", 20 * 90);
         p.displayClientMessage(Component.literal("§6§lSHOWSTOPPER! §7(" + hits + " hit)"), true);
         return true;
     }
@@ -418,10 +605,10 @@ public class AgentAbilities {
     }
 
     private static boolean phoenixRunItBack(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Run It Back")) return false;
+        if (!checkUlt(p, "Phoenix")) return false;
+        consumeUlt(p.getUUID());
         p.setGameMode(GameType.SPECTATOR);
         phoenixUltTimer.put(p.getUUID(), 140);
-        setcd(p.getUUID(), "X", 20 * 60);
         p.displayClientMessage(Component.literal("§c§lRUN IT BACK! §r§7You have 7s — return will spawn you here"), true);
         return true;
     }
@@ -493,7 +680,8 @@ public class AgentAbilities {
     }
 
     private static boolean sovaHuntersFury(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Hunter's Fury")) return false;
+        if (!checkUlt(p, "Sova")) return false;
+        consumeUlt(p.getUUID());
         Vec3 look = p.getLookAngle();
         Vec3 pos  = p.getEyePosition();
         int hits = 0;
@@ -511,7 +699,6 @@ public class AgentAbilities {
                 }
             }
         }
-        setcd(p.getUUID(), "X", 20 * 60);
         p.displayClientMessage(Component.literal("§3§lHUNTER'S FURY! §r§7(" + hits + " hit)"), true);
         return true;
     }
@@ -561,21 +748,41 @@ public class AgentAbilities {
 
     private static boolean sageBarrier(ServerPlayer p) {
         if (onCooldown(p, "E", "Barrier Orb")) return false;
-        // Teleport a short hop to "place barrier" (visual only — would need block placement for full impl)
-        p.displayClientMessage(Component.literal("§aBarrier Orb! §7Wall placed in front"), true);
+        ServerLevel lvl = (ServerLevel) p.level();
+        Vec3 look = p.getLookAngle();
+        Vec3 base = p.position().add(look.scale(3));
+        Vec3 right = new Vec3(-look.z, 0, look.x).normalize();
+        List<BlockPos> wall = new ArrayList<>();
+        for (int col = -2; col <= 2; col++) {
+            for (int row = 0; row < 4; row++) {
+                BlockPos bp = new BlockPos(
+                    (int) Math.floor(base.x + right.x * col),
+                    (int) Math.floor(base.y + row),
+                    (int) Math.floor(base.z + right.z * col)
+                );
+                if (lvl.getBlockState(bp).isAir()) {
+                    lvl.setBlock(bp, Blocks.WHITE_STAINED_GLASS.defaultBlockState(), 3);
+                    wall.add(bp);
+                }
+            }
+        }
+        sageWalls.put(p.getUUID(), wall);
+        sageWallLevel.put(p.getUUID(), lvl);
+        sageWallTimer.put(p.getUUID(), 20 * 40);
         setcd(p.getUUID(), "E", 20 * 40);
+        p.displayClientMessage(Component.literal("§aBarrier Orb! §7Wall placed (" + wall.size() + " blocks, 40s)"), true);
         return true;
     }
 
     private static boolean sageResurrect(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Resurrection")) return false;
+        if (!checkUlt(p, "Sage")) return false;
         // Revive a dead ally on the team
         List<ServerPlayer> revived = game.reviveDeadAlly(p);
         if (revived.isEmpty()) {
             p.displayClientMessage(Component.literal("§cNo dead allies to revive!"), true);
             return false;
         }
-        setcd(p.getUUID(), "X", 20 * 90);
+        consumeUlt(p.getUUID());
         p.displayClientMessage(Component.literal("§a§lRESURRECTION! §r§7Revived " + revived.size() + " ally"), true);
         return true;
     }
@@ -622,21 +829,23 @@ public class AgentAbilities {
     }
 
     private static boolean killjoyTurret(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "E", "Turret")) return false;
-        // Scan enemies nearby and damage closest
-        ServerPlayer target = rayCast(p, game, 20);
-        if (target != null) {
-            game.applyDamage(p, target, 30, false, false);
-            p.displayClientMessage(Component.literal("§eTurret! §7Fired at " + target.getName().getString()), true);
-        } else {
-            p.displayClientMessage(Component.literal("§eTurret placed! §7No enemies in range"), true);
+        if (killjoyTurrets.containsKey(p.getUUID())) {
+            killjoyTurrets.remove(p.getUUID());
+            killjoyTurretFire.remove(p.getUUID());
+            setcd(p.getUUID(), "E", 20 * 20);
+            p.displayClientMessage(Component.literal("§eTurret recalled."), true);
+            return true;
         }
-        setcd(p.getUUID(), "E", 20 * 30);
+        if (onCooldown(p, "E", "Turret")) return false;
+        killjoyTurrets.put(p.getUUID(), p.position());
+        killjoyTurretFire.put(p.getUUID(), 0);
+        p.displayClientMessage(Component.literal("§eTurret placed! §7Fires every 1.5s — press §eE §7to recall"), true);
         return true;
     }
 
     private static boolean killjoyLockdown(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Lockdown")) return false;
+        if (!checkUlt(p, "Killjoy")) return false;
+        consumeUlt(p.getUUID());
         Vec3 pos = p.position();
         int detained = 0;
         for (ServerPlayer e : enemiesInRadius(p, game, pos, 12.0)) {
@@ -644,7 +853,6 @@ public class AgentAbilities {
             e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 2, false, false));
             detained++;
         }
-        setcd(p.getUUID(), "X", 20 * 120);
         p.displayClientMessage(Component.literal("§e§lLOCKDOWN! §r§7" + detained + " enemies detained"), true);
         return true;
     }
@@ -704,7 +912,8 @@ public class AgentAbilities {
     }
 
     private static boolean cypherNeuralTheft(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Neural Theft")) return false;
+        if (!checkUlt(p, "Cypher")) return false;
+        consumeUlt(p.getUUID());
         // Reveal all enemy positions to whole team
         for (ServerPlayer e : game.getEnemyPlayers(p)) {
             Vec3 ep = e.position();
@@ -714,7 +923,6 @@ public class AgentAbilities {
                 ally.sendSystemMessage(Component.literal(msg));
             }
         }
-        setcd(p.getUUID(), "X", 20 * 90);
         p.displayClientMessage(Component.literal("§7§lNEURAL THEFT! §r§7All enemy positions revealed"), true);
         return true;
     }
@@ -756,13 +964,13 @@ public class AgentAbilities {
     }
 
     private static boolean omenFromTheShadows(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "From the Shadows")) return false;
+        if (!checkUlt(p, "Omen")) return false;
+        consumeUlt(p.getUUID());
         // Teleport to a random spawn point in the map (simulates global teleport)
         p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 100, 0, false, false));
         Vec3 look = p.getLookAngle();
         Vec3 pos  = p.position();
         p.teleportTo(pos.x + look.x * 15, pos.y, pos.z + look.z * 15);
-        setcd(p.getUUID(), "X", 20 * 60);
         p.displayClientMessage(Component.literal("§5§lFROM THE SHADOWS! §r§7Teleported"), true);
         return true;
     }
@@ -824,7 +1032,8 @@ public class AgentAbilities {
     }
 
     private static boolean viperVipersPit(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Viper's Pit")) return false;
+        if (!checkUlt(p, "Viper")) return false;
+        consumeUlt(p.getUUID());
         Vec3 pos = p.position();
         int hits = 0;
         for (ServerPlayer e : enemiesInRadius(p, game, pos, 10.0)) {
@@ -833,7 +1042,6 @@ public class AgentAbilities {
             e.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 40, 0, false, false));
             hits++;
         }
-        setcd(p.getUUID(), "X", 20 * 90);
         p.displayClientMessage(Component.literal("§2§lVIPER'S PIT! §r§7(" + hits + " caught in gas)"), true);
         return true;
     }
@@ -867,12 +1075,16 @@ public class AgentAbilities {
 
     private static boolean brimSkySmoke(ServerPlayer p, ValorantGame game) {
         if (onCooldown(p, "Q", "Sky Smoke")) return false;
-        Vec3 target = p.getEyePosition().add(p.getLookAngle().scale(15));
-        for (ServerPlayer e : enemiesInRadius(p, game, target, 5.0)) {
-            e.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 0, false, false));
+        List<int[]> zones = brimSmokeZones.computeIfAbsent(p.getUUID(), k -> new ArrayList<>());
+        if (zones.size() >= 3) {
+            p.displayClientMessage(Component.literal("§cMax 3 smokes active!"), true);
+            return false;
         }
+        Vec3 target = p.getEyePosition().add(p.getLookAngle().scale(15));
+        zones.add(new int[]{(int) target.x, (int) target.y, (int) target.z, 300});
+        brimSmokeLvl.put(p.getUUID(), (ServerLevel) p.level());
         setcd(p.getUUID(), "Q", 20 * 25);
-        p.displayClientMessage(Component.literal("§6Sky Smoke! §7Smokes deployed"), true);
+        p.displayClientMessage(Component.literal("§6Sky Smoke! §7Smoke " + zones.size() + "/3 deployed (15s)"), true);
         return true;
     }
 
@@ -889,14 +1101,14 @@ public class AgentAbilities {
     }
 
     private static boolean brimOrbitalStrike(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Orbital Strike")) return false;
+        if (!checkUlt(p, "Brimstone")) return false;
+        consumeUlt(p.getUUID());
         Vec3 target = p.getEyePosition().add(p.getLookAngle().scale(20));
         int hits = 0;
         for (ServerPlayer e : enemiesInRadius(p, game, target, 7.0)) {
             game.applyDamage(p, e, 140, false, false);
             hits++;
         }
-        setcd(p.getUUID(), "X", 20 * 120);
         p.displayClientMessage(Component.literal("§6§lORBITAL STRIKE! §r§7(" + hits + " hit)"), true);
         return true;
     }
@@ -960,7 +1172,8 @@ public class AgentAbilities {
     }
 
     private static boolean breachRollingThunder(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Rolling Thunder")) return false;
+        if (!checkUlt(p, "Breach")) return false;
+        consumeUlt(p.getUUID());
         Vec3 look = p.getLookAngle();
         int hits = 0;
         for (int i = 2; i <= 20; i += 2) {
@@ -972,7 +1185,6 @@ public class AgentAbilities {
                 hits++;
             }
         }
-        setcd(p.getUUID(), "X", 20 * 90);
         p.displayClientMessage(Component.literal("§c§lROLLING THUNDER! §r§7(" + hits + " launched)"), true);
         return true;
     }
@@ -1027,14 +1239,14 @@ public class AgentAbilities {
     }
 
     private static boolean neonOverdrive(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Overdrive")) return false;
+        if (!checkUlt(p, "Neon")) return false;
+        consumeUlt(p.getUUID());
         p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 300, 3, false, false));
         p.addEffect(new MobEffectInstance(MobEffects.DIG_SPEED, 300, 2, false, false));
         neonUltTimer.put(p.getUUID(), 300);
         // Zap nearest enemy with lightning beam
         ServerPlayer target = rayCast(p, game, 10);
         if (target != null) game.applyDamage(p, target, 65, false, false);
-        setcd(p.getUUID(), "X", 20 * 90);
         p.displayClientMessage(Component.literal("§b§lOVERDRIVE! §r§7Lightning active for 15s"), true);
         return true;
     }
@@ -1099,14 +1311,14 @@ public class AgentAbilities {
     }
 
     private static boolean skyeSeekers(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Seekers")) return false;
+        if (!checkUlt(p, "Skye")) return false;
+        consumeUlt(p.getUUID());
         int blinded = 0;
         for (ServerPlayer e : game.getEnemyPlayers(p)) {
             e.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 50, 0, false, false));
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1, false, false));
             blinded++;
         }
-        setcd(p.getUUID(), "X", 20 * 90);
         p.displayClientMessage(Component.literal("§a§lSEEKERS! §r§7All enemies nearsighted (" + blinded + ")"), true);
         return true;
     }
@@ -1172,7 +1384,8 @@ public class AgentAbilities {
     }
 
     private static boolean chamberTourDeForce(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Tour de Force")) return false;
+        if (!checkUlt(p, "Chamber")) return false;
+        consumeUlt(p.getUUID());
         ServerPlayer target = rayCast(p, game, 50);
         if (target != null) {
             game.applyDamage(p, target, 150, true, false);
@@ -1184,7 +1397,6 @@ public class AgentAbilities {
         } else {
             p.displayClientMessage(Component.literal("§cTour de Force: §7No target in sight"), true);
         }
-        setcd(p.getUUID(), "X", 20 * 120);
         return true;
     }
 
@@ -1248,7 +1460,8 @@ public class AgentAbilities {
     }
 
     private static boolean fadeNightfall(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Nightfall")) return false;
+        if (!checkUlt(p, "Fade")) return false;
+        consumeUlt(p.getUUID());
         Vec3 look = p.getLookAngle();
         int hits = 0;
         for (int i = 2; i <= 30; i += 2) {
@@ -1259,7 +1472,6 @@ public class AgentAbilities {
                 hits++;
             }
         }
-        setcd(p.getUUID(), "X", 20 * 90);
         p.displayClientMessage(Component.literal("§8§lNIGHTFALL! §r§7(" + hits + " decayed)"), true);
         return true;
     }
@@ -1328,7 +1540,8 @@ public class AgentAbilities {
     }
 
     private static boolean gekkoThrash(ServerPlayer p, ValorantGame game) {
-        if (onCooldown(p, "X", "Thrash")) return false;
+        if (!checkUlt(p, "Gekko")) return false;
+        consumeUlt(p.getUUID());
         ServerPlayer target = rayCast(p, game, 15);
         if (target != null) {
             target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 255, false, false));
@@ -1337,7 +1550,6 @@ public class AgentAbilities {
         } else {
             p.displayClientMessage(Component.literal("§cThrash: §7No target found"), true);
         }
-        setcd(p.getUUID(), "X", 20 * 90);
         return true;
     }
 
