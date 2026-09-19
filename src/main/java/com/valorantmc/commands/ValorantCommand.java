@@ -46,6 +46,7 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
             case "vjoin"       -> { return handleJoin(sender, args); }
             case "vleave"      -> { return handleLeave(sender); }
             case "vquick"      -> { return handleJoin(sender, new String[]{"join", "default"}); }
+            case "vpack", "vresourcepack" -> { return handlePack(sender); }
         }
 
         // Main /valorant command
@@ -436,6 +437,24 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
         }
         p.setSpectatorTarget(alive.get(idx));
         p.sendMessage(ValorantMC.colorize("&7Spectating &f" + alive.get(idx).getName()));
+        return true;
+    }
+
+    private boolean handlePack(CommandSender sender) {
+        if (!(sender instanceof Player p)) {
+            sender.sendMessage("Players only.");
+            return true;
+        }
+        if (plugin.getResourcePackManager() != null) {
+            plugin.getResourcePackManager().sendPack(p);
+            String url = plugin.getResourcePackManager().getPackUrl();
+            p.sendMessage(ValorantMC.colorize("&a[ValorantMC] Prompted resource pack download!"));
+            if (url != null) {
+                p.sendMessage(ValorantMC.colorize("&7Direct download link: &b" + url));
+            }
+        } else {
+            p.sendMessage(ValorantMC.colorize("&cResource pack manager is disabled in config.yml."));
+        }
         return true;
     }
 

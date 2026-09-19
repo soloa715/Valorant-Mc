@@ -78,6 +78,10 @@ commands:
   vquick:
     description: Quick play matchmaking
     usage: /vquick
+  vpack:
+    description: Re-send resource pack prompt and direct download URL
+    aliases: [vresourcepack, pack]
+    usage: /vpack
 
 permissions:
   valorantmc.admin:
