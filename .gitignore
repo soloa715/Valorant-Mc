@@ -74,11 +74,19 @@ run/.console_history
 # Third-party plugins that aren't part of this project
 run/plugins/multiverse-core-*.jar
 
-# ── Downloaded tools (re-downloaded by run-server.bat) ───────────────────────
+# ── Downloaded tools & test scripts ──────────────────────────────────────────
 tools/jdk25/
+tools/maven/
 tools/gradle-*/
 tools/*.zip
 tools/minecraft-mcp-server/node_modules/
+tools/debug_paper.ps1
+tools/test_2bots.js
+tools/test_bot.js
+tools/setup_match.js
+tools/test_valorant_server.py
+tools/typesafe_eval.py
+eval_report.json
 
 # ── Fabric mod build output ───────────────────────────────────────────────────
 mod/build/
