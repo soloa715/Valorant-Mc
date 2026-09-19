@@ -97,8 +97,19 @@ public class ValorantGame {
     // ── Player join / leave ───────────────────────────────────────────────────
 
     public void addPlayer(ServerPlayer p) {
-        if (attackers.size() <= defenders.size()) attackers.addPlayer(p);
-        else defenders.addPlayer(p);
+        addPlayer(p, null);
+    }
+
+    public void addPlayer(ServerPlayer p, String preferredTeam) {
+        if ("atk".equalsIgnoreCase(preferredTeam) || "attackers".equalsIgnoreCase(preferredTeam)) {
+            attackers.addPlayer(p);
+        } else if ("def".equalsIgnoreCase(preferredTeam) || "defenders".equalsIgnoreCase(preferredTeam)) {
+            defenders.addPlayer(p);
+        } else if (attackers.size() <= defenders.size()) {
+            attackers.addPlayer(p);
+        } else {
+            defenders.addPlayer(p);
+        }
 
         playerHealth.put(p.getUUID(), 100);
         playerShield.put(p.getUUID(), 0);
@@ -291,6 +302,11 @@ public class ValorantGame {
 
         if (spikeDefuser != null) {
             defuseTicks--;
+            ServerPlayer defuser = server.getPlayerList().getPlayer(spikeDefuser);
+            if (defuser != null && defuseTicks % 5 == 0) {
+                float secLeft = (float) defuseTicks / 20.0f;
+                defuser.displayClientMessage(Component.literal("§bDefusing Spike... §f(" + String.format("%.1f", secLeft) + "s)"), true);
+            }
             if (defuseTicks <= 0) {
                 spikePlanted   = false;
                 UUID defuserUuid = spikeDefuser;
@@ -391,7 +407,10 @@ public class ValorantGame {
 
         List<ServerPlayer> atks = attackers.getOnlinePlayers(server);
         if (!atks.isEmpty()) {
-            spikeCarrier = atks.get(new Random().nextInt(atks.size())).getUUID();
+            ServerPlayer carrier = atks.get(new Random().nextInt(atks.size()));
+            spikeCarrier = carrier.getUUID();
+            carrier.displayClientMessage(Component.literal("§cYou have the Spike!"), true);
+            carrier.sendSystemMessage(Component.literal("§c§lSPIKE GIVEN §r§7— Press §cC §7or type §c/vuse C §7to plant at A/B site."));
         }
 
         broadcast(server, "§c§lFIGHT!");

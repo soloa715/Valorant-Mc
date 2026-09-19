@@ -54,6 +54,10 @@ public class ValorantServer {
     }
 
     public boolean joinGame(ServerPlayer p, String gameId) {
+        return joinGame(p, gameId, null);
+    }
+
+    public boolean joinGame(ServerPlayer p, String gameId, String team) {
         if (isInGame(p.getUUID())) {
             p.sendSystemMessage(Component.literal("§cYou're already in a game!"));
             return false;
@@ -63,7 +67,7 @@ public class ValorantServer {
             p.sendSystemMessage(Component.literal("§cGame '" + gameId + "' not found!"));
             return false;
         }
-        g.addPlayer(p);
+        g.addPlayer(p, team);
         playerGameMap.put(p.getUUID(), gameId);
         if (g.getState() != GameState.WAITING) {
             g.addPlayerToBossBar(p);

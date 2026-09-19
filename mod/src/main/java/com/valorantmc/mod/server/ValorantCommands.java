@@ -14,11 +14,13 @@ public class ValorantCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 
-        // /vjoin [gameId]
+        // /vjoin [gameId] [team]
         dispatcher.register(Commands.literal("vjoin")
-                .executes(ctx -> cmdJoin(ctx, "default"))
+                .executes(ctx -> cmdJoin(ctx, "default", null))
                 .then(Commands.argument("gameId", StringArgumentType.word())
-                        .executes(ctx -> cmdJoin(ctx, StringArgumentType.getString(ctx, "gameId")))));
+                        .executes(ctx -> cmdJoin(ctx, StringArgumentType.getString(ctx, "gameId"), null))
+                        .then(Commands.argument("team", StringArgumentType.word())
+                                .executes(ctx -> cmdJoin(ctx, StringArgumentType.getString(ctx, "gameId"), StringArgumentType.getString(ctx, "team"))))));
 
         // /vleave
         dispatcher.register(Commands.literal("vleave")
@@ -137,7 +139,7 @@ public class ValorantCommands {
 
     // ── Command implementations ───────────────────────────────────────────────
 
-    private static int cmdJoin(CommandContext<CommandSourceStack> ctx, String gameId) {
+    private static int cmdJoin(CommandContext<CommandSourceStack> ctx, String gameId, String team) {
         ServerPlayer p = getPlayer(ctx);
         if (p == null) return 0;
 
@@ -146,7 +148,7 @@ public class ValorantCommands {
             vs.createGame(gameId);
             p.sendSystemMessage(Component.literal("§7Created game §e" + gameId));
         }
-        vs.joinGame(p, gameId);
+        vs.joinGame(p, gameId, team);
         return 1;
     }
 
@@ -167,12 +169,9 @@ public class ValorantCommands {
             p.sendSystemMessage(Component.literal("§cYou're not in a game!"));
             return 0;
         }
-        if (g.getState() != GameState.AGENT_SELECT) {
-            p.sendSystemMessage(Component.literal("§cAgent select is not active!"));
-            return 0;
-        }
         boolean ok = g.selectAgent(p, agentName);
         if (!ok) p.sendSystemMessage(Component.literal("§cUnknown agent: §f" + agentName));
+        else p.sendSystemMessage(Component.literal("§aSelected agent: §b" + agentName));
         return ok ? 1 : 0;
     }
 
