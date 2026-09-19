@@ -78,6 +78,7 @@ run/plugins/multiverse-core-*.jar
 tools/jdk25/
 tools/gradle-*/
 tools/*.zip
+tools/minecraft-mcp-server/node_modules/
 
 # ── Fabric mod build output ───────────────────────────────────────────────────
 mod/build/
