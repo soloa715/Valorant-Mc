@@ -84,15 +84,21 @@ public class MapSetupCommand implements CommandExecutor {
     private void handleAddSpawn(Player p, String[] args) {
         SetupSession s = getSession(p); if (s == null) return;
         if (args.length < 2) { p.sendMessage(color(PREFIX + "&cUsage: /vmapsetup addspawn <atk|def>")); return; }
-        Location loc = p.getLocation();
+        org.bukkit.block.Block target = p.getTargetBlockExact(50);
+        boolean raycast = (target != null);
+        Location loc = raycast ? target.getLocation().add(0.5, 1.0, 0.5) : p.getLocation();
+        loc.setYaw(p.getLocation().getYaw());
+        loc.setPitch(p.getLocation().getPitch());
         String entry = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ()
                 + "," + Math.round(loc.getYaw()) + "," + Math.round(loc.getPitch());
         if (args[1].equalsIgnoreCase("atk") || args[1].equalsIgnoreCase("attacker")) {
             s.attackSpawns.add(entry);
-            p.sendMessage(color(PREFIX + "&aAdded attacker spawn #" + s.attackSpawns.size() + ": &7" + entry));
+            p.sendMessage(color(PREFIX + "&aAdded attacker spawn #" + s.attackSpawns.size() + ": &7" + entry
+                    + (raycast ? " &8[targeted block]" : " &8[player position]")));
         } else if (args[1].equalsIgnoreCase("def") || args[1].equalsIgnoreCase("defender")) {
             s.defendSpawns.add(entry);
-            p.sendMessage(color(PREFIX + "&aAdded defender spawn #" + s.defendSpawns.size() + ": &7" + entry));
+            p.sendMessage(color(PREFIX + "&aAdded defender spawn #" + s.defendSpawns.size() + ": &7" + entry
+                    + (raycast ? " &8[targeted block]" : " &8[player position]")));
         } else {
             p.sendMessage(color(PREFIX + "&cUse 'atk' or 'def'."));
         }
@@ -101,14 +107,18 @@ public class MapSetupCommand implements CommandExecutor {
     private void handleAddSite(Player p, String[] args) {
         SetupSession s = getSession(p); if (s == null) return;
         if (args.length < 2) { p.sendMessage(color(PREFIX + "&cUsage: /vmapsetup addsite <a|b>")); return; }
-        Location loc = p.getLocation();
+        org.bukkit.block.Block target = p.getTargetBlockExact(50);
+        boolean raycast = (target != null);
+        Location loc = raycast ? target.getLocation().add(0.5, 1.0, 0.5) : p.getLocation();
         String entry = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
         if (args[1].equalsIgnoreCase("a")) {
             s.siteA.add(entry);
-            p.sendMessage(color(PREFIX + "&aAdded Site A location #" + s.siteA.size() + ": &7" + entry));
+            p.sendMessage(color(PREFIX + "&aAdded Site A location #" + s.siteA.size() + ": &7" + entry
+                    + (raycast ? " &8[targeted block]" : " &8[player position]")));
         } else if (args[1].equalsIgnoreCase("b")) {
             s.siteB.add(entry);
-            p.sendMessage(color(PREFIX + "&aAdded Site B location #" + s.siteB.size() + ": &7" + entry));
+            p.sendMessage(color(PREFIX + "&aAdded Site B location #" + s.siteB.size() + ": &7" + entry
+                    + (raycast ? " &8[targeted block]" : " &8[player position]")));
         } else {
             p.sendMessage(color(PREFIX + "&cUse 'a' or 'b'."));
         }

@@ -118,69 +118,37 @@ for /f "tokens=*" %%V in ('"%JAVA_HOME%\bin\java" -version 2^>^&1') do (
 :java_done
 
 REM ═══════════════════════════════════════════════════════════════
-REM  STEP 2 — Build Fabric mod (Gradle)
+REM  STEP 2 — Build Paper Server Plugin (Maven)
 REM ═══════════════════════════════════════════════════════════════
-echo [2/4] Building Fabric mod...
+echo [2/4] Building ValorantMC Paper plugin...
 
-if not exist "%GRADLE_BAT%" (
-    echo        Downloading Gradle %GRADLE_VERSION%...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest 'https://services.gradle.org/distributions/gradle-%GRADLE_VERSION%-bin.zip' -OutFile '%TOOLS_DIR%\gradle.zip'; Expand-Archive '%TOOLS_DIR%\gradle.zip' '%TOOLS_DIR%' -Force; Remove-Item '%TOOLS_DIR%\gradle.zip'"
-    if errorlevel 1 (
-        echo  ERROR: Failed to download Gradle. Check internet connection.
-        pause & exit /b 1
-    )
-)
-
-echo        (First run downloads ~150 MB of MC %MC_VERSION% + Fabric API)
-pushd "%~dp0mod"
-call "%GRADLE_BAT%" build -q --no-daemon
+call "%~dp0build-plugin.bat"
 if errorlevel 1 (
-    popd
     echo.
-    echo  ERROR: Fabric mod build failed. See output above.
+    echo  ERROR: Plugin build failed. See output above.
     pause & exit /b 1
 )
-popd
-echo        OK: mod\build\libs\valorantmc-mod-1.0.0.jar
+echo        OK: target\ValorantMC-1.0.0.jar
 
 REM ═══════════════════════════════════════════════════════════════
-REM  STEP 3 — Install Fabric server (once)
+REM  STEP 3 — Check Paper 1.21.4 server (once)
 REM ═══════════════════════════════════════════════════════════════
-echo [3/4] Checking Fabric server...
+echo [3/4] Checking Paper 1.21.4 server...
 
-if not exist "%SERVER_DIR%\fabric-server-launch.jar" (
-    echo        Installing Fabric %MC_VERSION% server loader %LOADER_VERSION%...
-
-    REM Download fabric-installer if needed
-    if not exist "%TOOLS_DIR%\%FABRIC_INSTALLER_JAR%" (
-        echo        Downloading Fabric installer %FABRIC_INSTALLER_VERSION%...
-        powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest 'https://maven.fabricmc.net/net/fabricmc/fabric-installer/%FABRIC_INSTALLER_VERSION%/fabric-installer-%FABRIC_INSTALLER_VERSION%.jar' -OutFile '%TOOLS_DIR%\%FABRIC_INSTALLER_JAR%'"
-        if errorlevel 1 (
-            echo  ERROR: Failed to download Fabric installer. Check internet.
-            pause & exit /b 1
-        )
-    )
-
-    REM Run installer — installs into SERVER_DIR
-    "%JAVA_HOME%\bin\java" -jar "%TOOLS_DIR%\%FABRIC_INSTALLER_JAR%" server -mcversion %MC_VERSION% -loader %LOADER_VERSION% -downloadMinecraft -dir "%SERVER_DIR%"
+if not exist "%SERVER_DIR%\paper-1.21.4.jar" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%TOOLS_DIR%\download_paper.ps1"
     if errorlevel 1 (
-        echo.
-        echo  ERROR: Fabric server installation failed.
+        echo  ERROR: Paper server download failed.
         pause & exit /b 1
     )
-    echo        Fabric server installed.
-
-    REM Accept EULA
-    >"%SERVER_DIR%\eula.txt" echo eula=true
-) else (
-    echo        Already installed.
 )
+>"%SERVER_DIR%\eula.txt" echo eula=true
 
 REM Server properties (create once)
 if not exist "%SERVER_DIR%\server.properties" (
     (
         echo allow-flight=true
-        echo motd=ValorantMC Dev Server
+        echo motd=ValorantMC Paper Server
         echo server-port=25565
         echo gamemode=adventure
         echo difficulty=normal
@@ -191,31 +159,16 @@ if not exist "%SERVER_DIR%\server.properties" (
     ) > "%SERVER_DIR%\server.properties"
 )
 
-if not exist "%SERVER_DIR%\mods" mkdir "%SERVER_DIR%\mods"
+if not exist "%SERVER_DIR%\plugins" mkdir "%SERVER_DIR%\plugins"
 
 REM ═══════════════════════════════════════════════════════════════
-REM  STEP 4 — Deploy mod to server and client-mods folder
+REM  STEP 4 — Deploy plugin to server plugins folder
 REM ═══════════════════════════════════════════════════════════════
-echo [4/4] Deploying mod...
+echo [4/4] Deploying ValorantMC plugin...
 
-REM Download Fabric API if not already present
-set FABRIC_API_JAR=%SERVER_DIR%\mods\fabric-api-0.110.5+1.21.4.jar
-if not exist "%FABRIC_API_JAR%" (
-    echo        Downloading Fabric API 0.110.5+1.21.4...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest 'https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/0.110.5+1.21.4/fabric-api-0.110.5+1.21.4.jar' -OutFile '%FABRIC_API_JAR%'"
-    if errorlevel 1 (echo  WARNING: Fabric API download failed) else (echo        Fabric API downloaded.)
-)
-
-del /q "%SERVER_DIR%\mods\valorantmc-mod-*.jar"    >nul 2>&1
-copy /y "%~dp0mod\build\libs\valorantmc-mod-1.0.0.jar" "%SERVER_DIR%\mods\" >nul
-if errorlevel 1 (echo  WARNING: server mod copy failed) else (
-    echo        Server  -^> run\server\mods\valorantmc-mod-1.0.0.jar
-)
-
-del /q "%CLIENT_MODS_DIR%\valorantmc-mod-*.jar"    >nul 2>&1
-copy /y "%~dp0mod\build\libs\valorantmc-mod-1.0.0.jar" "%CLIENT_MODS_DIR%\" >nul
-if errorlevel 1 (echo  WARNING: client-mods copy failed) else (
-    echo        Client  -^> run\client-mods\valorantmc-mod-1.0.0.jar
+copy /y "%~dp0target\ValorantMC-1.0.0.jar" "%SERVER_DIR%\plugins\" >nul
+if errorlevel 1 (echo  WARNING: plugin copy failed) else (
+    echo        Plugin  -^> run\server\plugins\ValorantMC-1.0.0.jar
 )
 
 REM ═══════════════════════════════════════════════════════════════
@@ -223,18 +176,16 @@ REM  LAUNCH
 REM ═══════════════════════════════════════════════════════════════
 echo.
 echo ============================================================
-echo  Starting Fabric MC %MC_VERSION% on port 25565
+echo  Starting Paper MC %MC_VERSION% on port 25565
 echo.
-echo  To connect: use Fabric loader %LOADER_VERSION% for MC %MC_VERSION%
-echo  Install mod: copy run\client-mods\valorantmc-mod-1.0.0.jar
-echo               to %%APPDATA%%\.minecraft\mods\
+echo  Vanilla players can connect directly!
+echo  (Custom weapon models served automatically via resource pack)
 echo.
 echo  In-game commands:
-echo    /vjoin         — join default game
-echo    /vagent <name> — pick your agent
-echo    /vstart        — admin: start the match
-echo    /vshop         — open buy menu (or press B)
-echo    /vquick        — quick play
+echo    /valorant join — join match
+echo    /vagent        — pick agent
+echo    /vshop         — open buy menu
+echo    /vmapsetup     — admin map wizard
 echo  Ctrl-C to stop.
 echo ============================================================
 echo.
@@ -244,6 +195,6 @@ cd /d "%SERVER_DIR%"
     -XX:+UseG1GC -XX:+ParallelRefProcEnabled ^
     -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions ^
     -XX:+DisableExplicitGC -XX:+AlwaysPreTouch ^
-    -jar fabric-server-launch.jar --nogui
+    -jar paper-1.21.4.jar --nogui
 
 endlocal
