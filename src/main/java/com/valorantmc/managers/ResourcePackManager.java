@@ -127,12 +127,13 @@ public class ResourcePackManager implements Listener {
     }
 
     private String detectPublicIp() {
-        // Best-effort: return localhost so LAN servers work out of the box
         try {
-            return java.net.InetAddress.getLocalHost().getHostAddress();
-        } catch (Exception e) {
-            return "127.0.0.1";
-        }
+            String addr = java.net.InetAddress.getLocalHost().getHostAddress();
+            if (addr != null && !addr.isBlank() && !addr.startsWith("169.254")) {
+                return addr;
+            }
+        } catch (Exception ignored) {}
+        return "127.0.0.1";
     }
 
     // ── Zip builder ───────────────────────────────────────────────────────────

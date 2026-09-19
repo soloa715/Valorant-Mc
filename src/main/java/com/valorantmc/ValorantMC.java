@@ -31,6 +31,7 @@ public final class ValorantMC extends JavaPlugin {
             = new java.util.HashMap<>();
     private com.valorantmc.listeners.AbilityListener abilityListener;
 
+    private com.valorantmc.web.WebGuiServer webGuiServer;
     private FileConfiguration messages;
 
     @Override
@@ -62,35 +63,43 @@ public final class ValorantMC extends JavaPlugin {
         fabricChannelListener = new com.valorantmc.network.FabricChannelListener(this);
         fabricChannelListener.register();
 
-        // Register commands
+        // Web GUI Admin Panel
+        webGuiServer = new com.valorantmc.web.WebGuiServer(this, 8766);
+        webGuiServer.start();
+
+        // Register commands & tab completers
         ValorantCommand cmd = new ValorantCommand(this);
-        getCommand("valorant").setExecutor(cmd);
-        getCommand("valorant").setTabCompleter(cmd);
-        getCommand("vshop").setExecutor(cmd);
-        getCommand("vagent").setExecutor(cmd);
-        getCommand("vstats").setExecutor(cmd);
-        getCommand("vreload").setExecutor(cmd);
-        getCommand("vdropspike").setExecutor(cmd);
-        getCommand("vwalk").setExecutor(cmd);
-        getCommand("vuse").setExecutor(cmd);
-        getCommand("vskin").setExecutor(cmd);
-        getCommand("vplay").setExecutor(cmd);
-        getCommand("vcustom").setExecutor(cmd);
-        if (getCommand("vscoreboard") != null) getCommand("vscoreboard").setExecutor(cmd);
-        if (getCommand("vspec") != null)       getCommand("vspec").setExecutor(cmd);
-        if (getCommand("vstart") != null)      getCommand("vstart").setExecutor(cmd);
-        if (getCommand("vjoin") != null)       getCommand("vjoin").setExecutor(cmd);
-        if (getCommand("vleave") != null)      getCommand("vleave").setExecutor(cmd);
-        if (getCommand("vquick") != null)      getCommand("vquick").setExecutor(cmd);
-        Objects.requireNonNull(getCommand("vmapsetup")).setExecutor(new com.valorantmc.commands.MapSetupCommand(this));
-        Objects.requireNonNull(getCommand("vadmin")).setExecutor(
+        com.valorantmc.commands.ValorantTabCompleter vTab = new com.valorantmc.commands.ValorantTabCompleter(this);
+        com.valorantmc.commands.MapSetupTabCompleter mapTab = new com.valorantmc.commands.MapSetupTabCompleter(this);
+
+        String[] playerCmds = {"valorant", "vshop", "vagent", "vstats", "vreload", "vdropspike", "vwalk", "vuse", "vskin", "vplay", "vcustom", "vscoreboard", "vspec", "vstart", "vjoin", "vleave", "vquick", "vpack"};
+        for (String c : playerCmds) {
+            if (getCommand(c) != null) {
+                getCommand(c).setExecutor(cmd);
+                getCommand(c).setTabCompleter(vTab);
+            }
+        }
+
+        if (getCommand("vmapsetup") != null) {
+            getCommand("vmapsetup").setExecutor(new com.valorantmc.commands.MapSetupCommand(this));
+            getCommand("vmapsetup").setTabCompleter(mapTab);
+        }
+
+        if (getCommand("vadmin") != null) {
+            getCommand("vadmin").setExecutor(
                 (sender, cmd2, label, args) -> {
                     if (!(sender instanceof org.bukkit.entity.Player p)) { sender.sendMessage("Players only."); return true; }
                     if (!p.hasPermission("valorantmc.admin")) { p.sendMessage(colorize("&cNo permission.")); return true; }
+                    if (args.length > 0 && args[0].equalsIgnoreCase("web")) {
+                        p.sendMessage(colorize("&a&lValorantMC Web Admin GUI: &bhttp://localhost:8766"));
+                        return true;
+                    }
                     com.valorantmc.game.ValorantGame g = gameManager.getGame(p);
                     p.openInventory(com.valorantmc.gui.AdminGUI.buildMain(p, g));
                     return true;
                 });
+            getCommand("vadmin").setTabCompleter((sender, command, alias, args) -> args.length == 1 ? java.util.List.of("web") : java.util.Collections.emptyList());
+        }
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new WeaponListener(this), this);
@@ -106,11 +115,13 @@ public final class ValorantMC extends JavaPlugin {
         getLogger().info("  Weapons: " + weaponManager.getWeaponCount());
         getLogger().info("  Agents:  " + agentManager.getAgentCount());
         getLogger().info("  Maps:    " + mapManager.getMapCount());
+        getLogger().info("  Web GUI: http://localhost:8766");
         getLogger().info("=================================");
     }
 
     @Override
     public void onDisable() {
+        if (webGuiServer   != null) webGuiServer.stop();
         if (economyManager != null) economyManager.saveAll();
         if (skinManager    != null) skinManager.saveAll();
         if (statsManager   != null) statsManager.saveAll();

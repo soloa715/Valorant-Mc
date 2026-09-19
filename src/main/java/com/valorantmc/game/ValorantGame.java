@@ -57,6 +57,10 @@ public class ValorantGame {
     private final List<Location> siteALocations = new ArrayList<>();
     private final List<Location> siteBLocations = new ArrayList<>();
 
+    public com.valorantmc.managers.MapManager.ValorantMap getMap() {
+        return mapName != null ? plugin.getMapManager().getMap(mapName) : null;
+    }
+
     // ── Spike ─────────────────────────────────────────────────────────────────
     private final Spike spike;
 
