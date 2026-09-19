@@ -1,0 +1,32 @@
+{
+  "stats": {
+    "minecraft:custom": {
+      "minecraft:time_since_rest": 20087,
+      "minecraft:walk_one_cm": 3464,
+      "minecraft:leave_game": 10,
+      "minecraft:walk_under_water_one_cm": 1207,
+      "minecraft:play_time": 20087,
+      "minecraft:jump": 74,
+      "minecraft:time_since_death": 20087,
+      "minecraft:sprint_one_cm": 4477,
+      "minecraft:total_world_time": 21358,
+      "minecraft:fly_one_cm": 1329299,
+      "minecraft:walk_on_water_one_cm": 16281,
+      "minecraft:crouch_one_cm": 204,
+      "minecraft:sneak_time": 1357
+    },
+    "minecraft:used": {
+      "minecraft:oak_shelf": 21,
+      "minecraft:repeating_command_block": 2,
+      "minecraft:spruce_planks": 26,
+      "minecraft:player_head": 3,
+      "minecraft:chain_command_block": 1,
+      "minecraft:stripped_oak_wood": 26,
+      "minecraft:milk_bucket": 1
+    },
+    "minecraft:picked_up": {
+      "minecraft:oak_shelf": 1
+    }
+  },
+  "DataVersion": 4671
+}

@@ -1,0 +1,34 @@
+{
+  "stats": {
+    "minecraft:picked_up": {
+      "minecraft:wheat_seeds": 4,
+      "minecraft:dark_oak_sapling": 1
+    },
+    "minecraft:used": {
+      "minecraft:comparator": 2,
+      "minecraft:repeating_command_block": 10,
+      "minecraft:chain_command_block": 3,
+      "minecraft:moss_block": 8,
+      "minecraft:green_concrete_powder": 2,
+      "minecraft:milk_bucket": 1
+    },
+    "minecraft:dropped": {
+      "minecraft:small_amethyst_bud": 1
+    },
+    "minecraft:custom": {
+      "minecraft:sprint_one_cm": 17318,
+      "minecraft:time_since_rest": 72805,
+      "minecraft:walk_one_cm": 12026,
+      "minecraft:total_world_time": 79814,
+      "minecraft:leave_game": 17,
+      "minecraft:fly_one_cm": 4756695,
+      "minecraft:crouch_one_cm": 422,
+      "minecraft:sneak_time": 3076,
+      "minecraft:play_time": 72805,
+      "minecraft:jump": 283,
+      "minecraft:time_since_death": 72805,
+      "minecraft:drop": 1
+    }
+  },
+  "DataVersion": 4671
+}
