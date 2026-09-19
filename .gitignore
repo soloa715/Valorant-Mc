@@ -79,7 +79,7 @@ tools/jdk25/
 tools/maven/
 tools/gradle-*/
 tools/*.zip
-tools/minecraft-mcp-server/node_modules/
+tools/minecraft-mcp-server/
 tools/debug_paper.ps1
 tools/test_2bots.js
 tools/test_bot.js
