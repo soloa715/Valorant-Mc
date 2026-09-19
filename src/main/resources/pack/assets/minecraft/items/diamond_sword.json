@@ -1,0 +1,40 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/diamond_sword"
+    },
+    "cases": [
+      {
+        "when": 4003,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/phantom"
+        }
+      },
+      {
+        "when": 4103,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/phantom_prime"
+        }
+      },
+      {
+        "when": 4203,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/phantom_glitchpop"
+        }
+      },
+      {
+        "when": 4603,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/phantom_ion"
+        }
+      }
+    ]
+  }
+}

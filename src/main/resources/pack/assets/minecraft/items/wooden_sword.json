@@ -1,0 +1,47 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/wooden_sword"
+    },
+    "cases": [
+      {
+        "when": 1001,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/classic"
+        }
+      },
+      {
+        "when": 1101,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/classic_prime"
+        }
+      },
+      {
+        "when": 7001,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/knife"
+        }
+      },
+      {
+        "when": 7101,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/knife_prime"
+        }
+      },
+      {
+        "when": 7401,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/knife_elderflame"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/golden_axe"
+    },
+    "cases": [
+      {
+        "when": 4002,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/guardian"
+        }
+      },
+      {
+        "when": 4102,
+        "model": {
+          "type": "minecraft:model",
+          "model": "valorantmc:item/guardian_prime"
+        }
+      }
+    ]
+  }
+}
