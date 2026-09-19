@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Mixin;
 
-import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.LivingEntity;
@@ -22,11 +22,6 @@ import net.mcreator.valorantmc.event.LivingEntityEvents;
 public abstract class LivingEntityMixin {
 	@Shadow
 	protected int lastHurtByPlayerMemoryTime;
-
-	@Shadow
-	protected boolean isAlwaysExperienceDropper() {
-		return false;
-	}
 
 	@Inject(method = "swing(Lnet/minecraft/world/InteractionHand;Z)V", at = @At("HEAD"))
 	public void swing(InteractionHand hand, boolean updateSelf, CallbackInfo ci) {
@@ -58,10 +53,8 @@ public abstract class LivingEntityMixin {
 	@Inject(method = "dropExperience(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/Entity;)V", at = @At("HEAD"), cancellable = true)
 	public void dropExperience(ServerLevel serverLevel, Entity entity, CallbackInfo ci) {
 		LivingEntity self = (LivingEntity) (Object) this;
-		if (!self.wasExperienceConsumed() && (this.isAlwaysExperienceDropper() || this.lastHurtByPlayerMemoryTime > 0 && self.shouldDropExperience() && serverLevel.getGameRules().get(GameRules.MOB_DROPS))) {
-			if (!LivingEntityEvents.ENTITY_DROP_XP.invoker().onEntityDropXp(self, self.getLastHurtByPlayer(), (double) self.getExperienceReward(serverLevel, entity)))
-				ci.cancel();
-		}
+		if (!LivingEntityEvents.ENTITY_DROP_XP.invoker().onEntityDropXp(self, null, 0.0))
+			ci.cancel();
 	}
 
 	@Inject(method = "causeFallDamage(DFLnet/minecraft/world/damagesource/DamageSource;)Z", at = @At("HEAD"), cancellable = true)

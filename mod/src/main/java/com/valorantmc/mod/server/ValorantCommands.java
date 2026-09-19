@@ -403,7 +403,10 @@ public class ValorantCommands {
         ServerPlayer p = getPlayer(ctx);
         if (p == null) return 0;
         SpawnConfigManager sc = SpawnConfigManager.getInstance();
-        net.minecraft.world.phys.Vec3 pos = p.position();
+        net.minecraft.world.phys.HitResult hit = p.pick(50.0D, 0.0F, false);
+        net.minecraft.world.phys.Vec3 pos = (hit != null && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK)
+                ? hit.getLocation()
+                : p.position();
         boolean atk = team.equalsIgnoreCase("atk") || team.equalsIgnoreCase("attacker");
         boolean def = team.equalsIgnoreCase("def") || team.equalsIgnoreCase("defender");
         if (!atk && !def) {
@@ -413,8 +416,10 @@ public class ValorantCommands {
         if (atk) sc.addAttacker(pos);
         else     sc.addDefender(pos);
         String label = atk ? "§cAttacker" : "§bDefender";
+        boolean raycast = (hit != null && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK);
         ctx.getSource().sendSuccess(() -> Component.literal(
                 label + " §aspawn saved at §f" + fmt(pos)
+                + (raycast ? " §8[targeted block]" : " §8[player position]")
                 + " §8(total " + (atk ? sc.getAttackerSpawns().size() : sc.getDefenderSpawns().size()) + ")"), true);
         return 1;
     }
@@ -467,10 +472,15 @@ public class ValorantCommands {
             ctx.getSource().sendFailure(Component.literal("§cUse: /vsite add a  or  /vsite add b"));
             return 0;
         }
-        net.minecraft.world.phys.Vec3 pos = p.position();
+        net.minecraft.world.phys.HitResult hit = p.pick(50.0D, 0.0F, false);
+        net.minecraft.world.phys.Vec3 pos = (hit != null && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK)
+                ? hit.getLocation()
+                : p.position();
+        boolean raycast = (hit != null && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK);
         BombSiteManager.getInstance().setSite(isA, pos);
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a" + (isA ? "A" : "B") + " bomb site §7set at §f" + fmt(pos)), true);
+                "§a" + (isA ? "A" : "B") + " bomb site §7set at §f" + fmt(pos)
+                + (raycast ? " §8[targeted block]" : " §8[player position]")), true);
         return 1;
     }
 

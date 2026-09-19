@@ -45,7 +45,42 @@ public class MapManager {
         arenaConfig.defenderSpawns.addAll(ArenaManager.getDefenderSpawns());
         configs.put("Arena", arenaConfig);
 
-        // Scan for map folders with spawns.json
+        // Pre-configure all official Valorant maps
+        registerDefaultMap("Ascent",
+            Arrays.asList(new Vec3(-10, 100, -20), new Vec3(-12, 100, -22), new Vec3(-8, 100, -20)),
+            Arrays.asList(new Vec3(10, 100, 20), new Vec3(12, 100, 22), new Vec3(8, 100, 20)));
+        registerDefaultMap("Bind",
+            Arrays.asList(new Vec3(-20, 100, -10), new Vec3(-22, 100, -12), new Vec3(-20, 100, -8)),
+            Arrays.asList(new Vec3(20, 100, 10), new Vec3(22, 100, 12), new Vec3(20, 100, 8)));
+        registerDefaultMap("Haven",
+            Arrays.asList(new Vec3(0, 100, -30), new Vec3(-2, 100, -32), new Vec3(2, 100, -30)),
+            Arrays.asList(new Vec3(0, 100, 30), new Vec3(2, 100, 32), new Vec3(-2, 100, 30)));
+        registerDefaultMap("Split",
+            Arrays.asList(new Vec3(-15, 100, -15), new Vec3(-17, 100, -15), new Vec3(-15, 100, -17)),
+            Arrays.asList(new Vec3(15, 100, 15), new Vec3(17, 100, 15), new Vec3(15, 100, 17)));
+        registerDefaultMap("Icebox",
+            Arrays.asList(new Vec3(-25, 100, 0), new Vec3(-25, 100, -2), new Vec3(-27, 100, 0)),
+            Arrays.asList(new Vec3(25, 100, 0), new Vec3(25, 100, 2), new Vec3(27, 100, 0)));
+        registerDefaultMap("Breeze",
+            Arrays.asList(new Vec3(-30, 100, -30), new Vec3(-32, 100, -30), new Vec3(-30, 100, -32)),
+            Arrays.asList(new Vec3(30, 100, 30), new Vec3(32, 100, 30), new Vec3(30, 100, 32)));
+        registerDefaultMap("Fracture",
+            Arrays.asList(new Vec3(-18, 100, -18), new Vec3(-20, 100, -18), new Vec3(-18, 100, -20)),
+            Arrays.asList(new Vec3(18, 100, 18), new Vec3(20, 100, 18), new Vec3(18, 100, 20)));
+        registerDefaultMap("Lotus",
+            Arrays.asList(new Vec3(-22, 100, -5), new Vec3(-24, 100, -5), new Vec3(-22, 100, -7)),
+            Arrays.asList(new Vec3(22, 100, 5), new Vec3(24, 100, 5), new Vec3(22, 100, 7)));
+        registerDefaultMap("Pearl",
+            Arrays.asList(new Vec3(-14, 100, -25), new Vec3(-16, 100, -25), new Vec3(-14, 100, -27)),
+            Arrays.asList(new Vec3(14, 100, 25), new Vec3(16, 100, 25), new Vec3(14, 100, 27)));
+        registerDefaultMap("Sunset",
+            Arrays.asList(new Vec3(-12, 100, -18), new Vec3(-14, 100, -18), new Vec3(-12, 100, -20)),
+            Arrays.asList(new Vec3(12, 100, 18), new Vec3(14, 100, 18), new Vec3(12, 100, 20)));
+        registerDefaultMap("Abyss",
+            Arrays.asList(new Vec3(-28, 100, -14), new Vec3(-30, 100, -14), new Vec3(-28, 100, -16)),
+            Arrays.asList(new Vec3(28, 100, 14), new Vec3(30, 100, 14), new Vec3(28, 100, 16)));
+
+        // Scan for custom map folders with spawns.json
         if (Files.isDirectory(MAPS_DIR)) {
             try (DirectoryStream<Path> ds = Files.newDirectoryStream(MAPS_DIR)) {
                 for (Path mapDir : ds) {
@@ -152,13 +187,20 @@ public class MapManager {
     private static JsonArray toArray(List<Vec3> list) {
         JsonArray arr = new JsonArray();
         for (Vec3 v : list) {
-            JsonObject o = new JsonObject();
-            o.addProperty("x", Math.round(v.x * 10.0) / 10.0);
-            o.addProperty("y", Math.round(v.y * 10.0) / 10.0);
-            o.addProperty("z", Math.round(v.z * 10.0) / 10.0);
-            arr.add(o);
+            JsonObject obj = new JsonObject();
+            obj.addProperty("x", v.x);
+            obj.addProperty("y", v.y);
+            obj.addProperty("z", v.z);
+            arr.add(obj);
         }
         return arr;
+    }
+
+    private void registerDefaultMap(String name, List<Vec3> atk, List<Vec3> def) {
+        MapSpawnConfig cfg = new MapSpawnConfig(name);
+        cfg.attackerSpawns.addAll(atk);
+        cfg.defenderSpawns.addAll(def);
+        configs.put(name, cfg);
     }
 
     // ── Inner record ─────────────────────────────────────────────────────────
