@@ -45,6 +45,8 @@ public class MapManager {
         private int originX, originY, originZ;
         private boolean autoGenerate = false;
 
+        private double siteRadius = 5.0;
+
         public ValorantMap(String name, String displayName) {
             this.name        = name;
             this.displayName = displayName;
@@ -56,6 +58,8 @@ public class MapManager {
         public List<Location> getDefendSpawns() { return defendSpawns;}
         public List<Location> getSiteA()        { return siteA;       }
         public List<Location> getSiteB()        { return siteB;       }
+        public double         getSiteRadius()   { return siteRadius;  }
+        public void setSiteRadius(double r)     { this.siteRadius = Math.max(1.0, Math.min(30.0, r)); }
         public boolean        isBuilt()         { return built;       }
         public boolean        isAutoGenerate()  { return autoGenerate;}
         public String         getOriginWorld()  { return originWorld; }
@@ -78,15 +82,25 @@ public class MapManager {
         this.plugin     = plugin;
         this.mapsFolder = new File(plugin.getDataFolder(), "maps");
         if (!mapsFolder.exists()) mapsFolder.mkdirs();
-
         if (plugin.getConfig().getBoolean("maps.auto-load", true)) {
             autoCopyFromModding();
             loadMapsFromDisk();
-            // Only fall back to procedurally-generated arenas if the user has no real maps.
-            // (Procedural arenas appear as "a square in the sky" — not what we want.)
+            unpackDefaultMaps();
             if (maps.isEmpty()) {
                 plugin.getLogger().info("No real maps found — falling back to procedural arenas.");
                 registerBuiltinMaps();
+            }
+        }
+    }
+
+    private void unpackDefaultMaps() {
+        String[] mapNames = {"ascent", "abyss"};
+        for (String m : mapNames) {
+            File target = new File(mapsFolder, m + ".yml");
+            if (!target.exists()) {
+                try {
+                    plugin.saveResource("maps/" + m + ".yml", false);
+                } catch (Exception ignored) {}
             }
         }
     }
@@ -97,14 +111,16 @@ public class MapManager {
      * The originals remain untouched as control copies.
      */
     private void autoCopyFromModding() {
-        // Default: one level above server root (i.e. Valorant-Mc/modding/maps).
-        // Configurable via maps.modding-dir in config.yml (relative to server root).
-        String moddingPath = plugin.getConfig().getString("maps.modding-dir", "../modding/maps");
         File serverRoot = plugin.getServer().getWorldContainer();
-        File moddingDir = new File(serverRoot, moddingPath);
+        File moddingDir = new File(serverRoot, "../../modding/maps");
         if (!moddingDir.exists()) {
-            // also try two levels up from plugin data folder (legacy path)
-            moddingDir = new File(plugin.getDataFolder().getParentFile().getParentFile(), "modding/maps");
+            moddingDir = new File(plugin.getDataFolder().getParentFile().getParentFile().getParentFile(), "modding/maps");
+        }
+        if (!moddingDir.exists()) {
+            moddingDir = new File(serverRoot, "../modding/maps");
+        }
+        if (!moddingDir.exists()) {
+            moddingDir = new File("modding/maps");
         }
         if (!moddingDir.exists()) return;
         plugin.getLogger().info("[MapManager] Loading community maps from: " + moddingDir.getAbsolutePath());
@@ -257,15 +273,25 @@ public class MapManager {
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         String name        = cfg.getString("name", file.getName().replace(".yml", ""));
         String displayName = cfg.getString("display-name", name);
-        String worldName   = cfg.getString("world", "world");
-        World  world       = plugin.getServer().getWorld(worldName);
+        
+        // Always prefer dedicated valmap_<name> world if loaded on server
+        String targetWorldName = "valmap_" + name.toLowerCase();
+        World world = plugin.getServer().getWorld(targetWorldName);
+        if (world == null) {
+            String cfgWorld = cfg.getString("world", "world");
+            world = plugin.getServer().getWorld(cfgWorld);
+        }
+        if (world == null) {
+            world = plugin.getServer().getWorld("world");
+        }
 
         if (world == null) {
-            plugin.getLogger().warning("Map " + name + " references unknown world '" + worldName + "'. Skipping.");
+            plugin.getLogger().warning("Map " + name + " references unknown world. Skipping.");
             return;
         }
 
         ValorantMap map = new ValorantMap(name, displayName);
+        map.setSiteRadius(cfg.getDouble("site-radius", cfg.getDouble("site_radius", 5.0)));
 
         // Support both underscore keys (canonical) and hyphen keys (legacy/user YAMLs)
         loadLocations(cfg, "attack_spawns", world, map.getAttackSpawns());
@@ -278,7 +304,7 @@ public class MapManager {
         if (map.getSiteB().isEmpty()) loadLocations(cfg, "site-b", world, map.getSiteB());
 
         maps.put(name.toLowerCase(), map);
-        plugin.getLogger().info("Loaded map: " + displayName);
+        plugin.getLogger().info("Loaded map: " + displayName + " (site-radius: " + map.getSiteRadius() + ")");
     }
 
     private void loadLocations(YamlConfiguration cfg, String key, World world, List<Location> list) {
@@ -297,25 +323,9 @@ public class MapManager {
         }
     }
 
-    /** Register built-in auto-generated maps. Each map gets a unique world origin. */
+    /** Register built-in auto-generated maps. (Disabled so only hand-configured YAML maps are registered) */
     private void registerBuiltinMaps() {
-        String worldName = plugin.getConfig().getString("maps.default-world", "world");
-        int y = plugin.getConfig().getInt("maps.arena-y", 100);
-        int spacing = 500;
-        String[] names = {
-                "ascent", "bind", "haven", "split", "pearl",
-                "fracture", "breeze", "lotus", "sunset", "abyss"
-        };
-        String[] displays = {
-                "Ascent", "Bind", "Haven", "Split", "Pearl",
-                "Fracture", "Breeze", "Lotus", "Sunset", "Abyss"
-        };
-        for (int i = 0; i < names.length; i++) {
-            if (maps.containsKey(names[i])) continue;
-            ValorantMap m = new ValorantMap(names[i], displays[i]);
-            m.setOrigin(worldName, i * spacing, y, 0);
-            maps.put(names[i], m);
-        }
+        // Disabled mock generation
     }
 
     /**
@@ -368,12 +378,24 @@ public class MapManager {
     public void saveSessionToFile(String name, String worldName,
                                   List<String> attackSpawns, List<String> defendSpawns,
                                   List<String> siteA, List<String> siteB) {
+        saveSessionToFile(name, worldName, attackSpawns, defendSpawns, siteA, siteB, 5.0);
+    }
+
+    public void saveSessionToFile(String name, String worldName,
+                                  List<String> attackSpawns, List<String> defendSpawns,
+                                  List<String> siteA, List<String> siteB, double siteRadius) {
+        String valWorld = "valmap_" + name.toLowerCase();
+        if (plugin.getServer().getWorld(valWorld) != null) {
+            worldName = valWorld;
+        }
+
         org.bukkit.configuration.file.YamlConfiguration cfg =
                 new org.bukkit.configuration.file.YamlConfiguration();
         cfg.set("name", name);
         cfg.set("display-name", capitalise(name));
         cfg.set("world", worldName);
         cfg.set("auto-generate", false);
+        cfg.set("site-radius", siteRadius);
         cfg.set("attack_spawns", attackSpawns);
         cfg.set("defend_spawns", defendSpawns);
         cfg.set("site_a", siteA);
@@ -393,6 +415,20 @@ public class MapManager {
         // Auto-generated / procedural maps stay in memory.
         maps.entrySet().removeIf(e -> !e.getValue().isAutoGenerate());
         loadMapsFromDisk();
+    }
+
+    public boolean resetMap(String mapName) {
+        String key = mapName.toLowerCase();
+        File ymlFile = new File(mapsFolder, key + ".yml");
+        boolean deleted = false;
+        if (ymlFile.exists()) {
+            deleted = ymlFile.delete();
+        }
+        maps.remove(key);
+        autoCopyFromModding();
+        loadMapsFromDisk();
+        unpackDefaultMaps();
+        return deleted || maps.containsKey(key);
     }
 
     private String capitalise(String s) {

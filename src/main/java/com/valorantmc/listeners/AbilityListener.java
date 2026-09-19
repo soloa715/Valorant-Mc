@@ -23,6 +23,8 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.*;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -289,15 +291,56 @@ public class AbilityListener implements Listener {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private boolean isOnBombSite(Player p, ValorantGame game) {
-        // Check against registered bomb-site locations (5-block radius)
-        for (org.bukkit.Location site : game.getSiteALocations()) {
-            if (p.getLocation().distance(site) <= 5) return true;
-        }
-        for (org.bukkit.Location site : game.getSiteBLocations()) {
-            if (p.getLocation().distance(site) <= 5) return true;
-        }
+        if (game == null) return false;
+        double radius = (game.getMap() != null) ? game.getMap().getSiteRadius() : 5.0;
+        org.bukkit.Location pl = p.getLocation();
+
+        if (isInsideSiteRegion(pl, game.getSiteALocations(), radius)) return true;
+        if (isInsideSiteRegion(pl, game.getSiteBLocations(), radius)) return true;
+
         // If no sites defined, allow anywhere for testing
         return game.getSiteALocations().isEmpty() && game.getSiteBLocations().isEmpty();
+    }
+
+    private boolean isInsideSiteRegion(org.bukkit.Location playerLoc, List<org.bukkit.Location> sitePoints, double radius) {
+        if (sitePoints == null || sitePoints.isEmpty()) return false;
+        org.bukkit.World w = playerLoc.getWorld();
+
+        // 2 or more points = 3D cuboid region spanning Pos1 to Pos2
+        if (sitePoints.size() >= 2) {
+            double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
+            double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+            double minZ = Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+
+            for (org.bukkit.Location loc : sitePoints) {
+                if (loc.getWorld() != null && !loc.getWorld().equals(w)) return false;
+                minX = Math.min(minX, loc.getBlockX());
+                maxX = Math.max(maxX, loc.getBlockX());
+                minY = Math.min(minY, loc.getBlockY());
+                maxY = Math.max(maxY, loc.getBlockY());
+                minZ = Math.min(minZ, loc.getBlockZ());
+                maxZ = Math.max(maxZ, loc.getBlockZ());
+            }
+
+            double px = playerLoc.getX();
+            double py = playerLoc.getY();
+            double pz = playerLoc.getZ();
+
+            return px >= minX - 0.5 && px <= maxX + 1.5 &&
+                   pz >= minZ - 0.5 && pz <= maxZ + 1.5 &&
+                   py >= minY - 2.0 && py <= maxY + 4.0;
+        }
+
+        // Single point fallback (square block region centered at point)
+        org.bukkit.Location site = sitePoints.get(0);
+        if (site.getWorld() != null && !site.getWorld().equals(w)) return false;
+        double px = playerLoc.getX();
+        double py = playerLoc.getY();
+        double pz = playerLoc.getZ();
+
+        return Math.abs(px - site.getX()) <= radius &&
+               Math.abs(pz - site.getZ()) <= radius &&
+               py >= site.getY() - 2.5 && py <= site.getY() + 5.0;
     }
 
     /** Cancel any in-progress plant/defuse for this player (e.g. on quit or death). */

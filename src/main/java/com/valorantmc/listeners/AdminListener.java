@@ -63,6 +63,45 @@ public class AdminListener implements Listener {
     }
 
     @EventHandler
+    public void onPlayerInteract(org.bukkit.event.player.PlayerInteractEvent e) {
+        Player p = e.getPlayer();
+        ItemStack item = e.getItem();
+        if (item == null || !item.hasItemMeta()) return;
+        org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+        NamespacedKey nskWand = new NamespacedKey(plugin, "map_wand");
+        boolean isWand = meta.getPersistentDataContainer().has(nskWand, PersistentDataType.BOOLEAN)
+                || (meta.hasDisplayName() && meta.getDisplayName().contains("Map Wand"));
+        if (!isWand) return;
+
+        org.bukkit.block.Block clicked = e.getClickedBlock();
+        if (clicked == null) return;
+
+        com.valorantmc.commands.MapSetupCommand setupCmd =
+            (com.valorantmc.commands.MapSetupCommand) Objects.requireNonNull(plugin.getCommand("vmapsetup")).getExecutor();
+        com.valorantmc.commands.MapSetupCommand.SetupSession s = setupCmd.getActiveSession(p);
+        if (s == null) {
+            p.sendMessage(ValorantMC.colorize("&c[Map Wand] No active map setup session! Use /vmapsetup edit <map> first."));
+            return;
+        }
+
+        e.setCancelled(true);
+        Location loc = clicked.getLocation();
+        String coordStr = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+
+        if (e.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
+            s.pos1Str = coordStr;
+            spawnMarker(p, loc.clone().add(0.5, 1.0, 0.5), "§a§l[POS 1]");
+            p.sendMessage(ValorantMC.colorize("&a&l[Map Wand] Pos1 set to: &e" + coordStr));
+            p.sendMessage(ValorantMC.colorize("&7Right-click another block for Pos2, then run &b/vmapsetup setsite <a|b>&7."));
+        } else if (e.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
+            s.pos2Str = coordStr;
+            spawnMarker(p, loc.clone().add(0.5, 1.0, 0.5), "§b§l[POS 2]");
+            p.sendMessage(ValorantMC.colorize("&b&l[Map Wand] Pos2 set to: &e" + coordStr));
+            p.sendMessage(ValorantMC.colorize("&7Run &b/vmapsetup setsite a &7or &b/vmapsetup setsite b &7to save 3D region!"));
+        }
+    }
+
+    @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player admin)) return;
         if (!admin.hasPermission("valorantmc.admin")) return;
@@ -124,6 +163,23 @@ public class AdminListener implements Listener {
             admin.openInventory(AdminGUI.buildPlayerSelect(admin, game, "troll")); return;
         }
         if (action.equals("map_setup")) {
+            // Check if player has an active setup session; if not, try auto-editing current world's map
+            try {
+                com.valorantmc.commands.MapSetupCommand setupCmd =
+                    (com.valorantmc.commands.MapSetupCommand) Objects.requireNonNull(plugin.getCommand("vmapsetup")).getExecutor();
+                com.valorantmc.commands.MapSetupCommand.SetupSession s = setupCmd.getActiveSession(admin);
+                if (s == null && (game == null || game.getMapName() == null)) {
+                    String wName = admin.getWorld().getName();
+                    for (String name : plugin.getMapManager().getMapNames()) {
+                        com.valorantmc.managers.MapManager.ValorantMap vm = plugin.getMapManager().getMap(name);
+                        if (vm != null && ((vm.getOriginWorld() != null && vm.getOriginWorld().equalsIgnoreCase(wName)) || name.equalsIgnoreCase(wName) || wName.toLowerCase().endsWith("_" + name.toLowerCase()))) {
+                            admin.performCommand("vmapsetup edit " + vm.getName());
+                            break;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+
             // Save current gamemode and enter Creative + fly for map setup
             if (!mapSetupModes.containsKey(admin.getUniqueId())) {
                 mapSetupModes.put(admin.getUniqueId(), admin.getGameMode());
@@ -381,9 +437,25 @@ public class AdminListener implements Listener {
         }
 
         // ── Map setup actions ────────────────────────────────────────────────
+        com.valorantmc.commands.MapSetupCommand setupCmd = null;
+        com.valorantmc.commands.MapSetupCommand.SetupSession s = null;
+        try {
+            setupCmd = (com.valorantmc.commands.MapSetupCommand) Objects.requireNonNull(plugin.getCommand("vmapsetup")).getExecutor();
+            s = setupCmd.getActiveSession(admin);
+        } catch (Exception ignored) {}
+
         if (action.startsWith("map_tp_atk:")) {
             int idx = Integer.parseInt(action.substring("map_tp_atk:".length()));
-            if (game != null && idx < game.getAttackSpawnsPublic().size()) {
+            if (s != null && idx < s.attackSpawns.size()) {
+                if (shift) {
+                    s.attackSpawns.remove(idx);
+                    admin.sendMessage(ValorantMC.colorize("&cRemoved ATK spawn #" + (idx+1) + "."));
+                } else {
+                    World w = Bukkit.getWorld(s.worldName); if (w == null) w = admin.getWorld();
+                    Location loc = AdminGUI.parseSpawnLoc(w, s.attackSpawns.get(idx));
+                    if (loc != null) admin.teleport(loc);
+                }
+            } else if (game != null && idx < game.getAttackSpawnsPublic().size()) {
                 Location dest = game.getAttackSpawnsPublic().get(idx);
                 if (shift) {
                     game.getAttackSpawnsPublic().remove(idx);
@@ -395,9 +467,19 @@ public class AdminListener implements Listener {
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
         if (action.startsWith("map_tp_def:")) {
             int idx = Integer.parseInt(action.substring("map_tp_def:".length()));
-            if (game != null && idx < game.getDefendSpawnsPublic().size()) {
+            if (s != null && idx < s.defendSpawns.size()) {
+                if (shift) {
+                    s.defendSpawns.remove(idx);
+                    admin.sendMessage(ValorantMC.colorize("&cRemoved DEF spawn #" + (idx+1) + "."));
+                } else {
+                    World w = Bukkit.getWorld(s.worldName); if (w == null) w = admin.getWorld();
+                    Location loc = AdminGUI.parseSpawnLoc(w, s.defendSpawns.get(idx));
+                    if (loc != null) admin.teleport(loc);
+                }
+            } else if (game != null && idx < game.getDefendSpawnsPublic().size()) {
                 if (shift) {
                     game.getDefendSpawnsPublic().remove(idx);
                     admin.sendMessage(ValorantMC.colorize("&cRemoved DEF spawn #" + (idx+1) + "."));
@@ -408,79 +490,261 @@ public class AdminListener implements Listener {
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
         if (action.startsWith("map_tp_siteA:")) {
             int idx = Integer.parseInt(action.substring("map_tp_siteA:".length()));
-            if (game != null && idx < game.getSiteALocations().size()) {
-                admin.teleport(game.getSiteALocations().get(idx));
+            if (s != null && idx < s.siteA.size()) {
+                if (shift) {
+                    s.siteA.remove(idx);
+                    admin.sendMessage(ValorantMC.colorize("&cRemoved Site A #" + (idx+1) + "."));
+                } else {
+                    World w = Bukkit.getWorld(s.worldName); if (w == null) w = admin.getWorld();
+                    Location loc = AdminGUI.parseBlockLoc(w, s.siteA.get(idx));
+                    if (loc != null) admin.teleport(loc);
+                }
+            } else if (game != null && idx < game.getSiteALocations().size()) {
+                if (shift) {
+                    game.getSiteALocations().remove(idx);
+                    admin.sendMessage(ValorantMC.colorize("&cRemoved Site A #" + (idx+1) + "."));
+                } else {
+                    admin.teleport(game.getSiteALocations().get(idx));
+                }
             }
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
         if (action.startsWith("map_tp_siteB:")) {
             int idx = Integer.parseInt(action.substring("map_tp_siteB:".length()));
-            if (game != null && idx < game.getSiteBLocations().size()) {
-                admin.teleport(game.getSiteBLocations().get(idx));
+            if (s != null && idx < s.siteB.size()) {
+                if (shift) {
+                    s.siteB.remove(idx);
+                    admin.sendMessage(ValorantMC.colorize("&cRemoved Site B #" + (idx+1) + "."));
+                } else {
+                    World w = Bukkit.getWorld(s.worldName); if (w == null) w = admin.getWorld();
+                    Location loc = AdminGUI.parseBlockLoc(w, s.siteB.get(idx));
+                    if (loc != null) admin.teleport(loc);
+                }
+            } else if (game != null && idx < game.getSiteBLocations().size()) {
+                if (shift) {
+                    game.getSiteBLocations().remove(idx);
+                    admin.sendMessage(ValorantMC.colorize("&cRemoved Site B #" + (idx+1) + "."));
+                } else {
+                    admin.teleport(game.getSiteBLocations().get(idx));
+                }
             }
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
+        if (action.equals("map_get_wand")) {
+            admin.performCommand("vmapsetup wand");
+            admin.closeInventory();
+            return;
+        }
+
+        if (action.equals("map_set_pos1")) {
+            if (s != null) {
+                org.bukkit.block.Block tb = admin.getTargetBlockExact(50);
+                Location loc = tb != null ? tb.getLocation() : admin.getLocation();
+                s.pos1Str = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+                spawnMarker(admin, loc.clone().add(0.5, 1.0, 0.5), "§a§l[POS 1]");
+                admin.sendMessage(ValorantMC.colorize("&aPos1 set to: &e" + s.pos1Str));
+            } else {
+                admin.sendMessage(ValorantMC.colorize("&cNo active setup session. Use /vmapsetup edit <map> first!"));
+            }
+            admin.openInventory(AdminGUI.buildMapSetup(admin, game));
+            return;
+        }
+
+        if (action.equals("map_set_pos2")) {
+            if (s != null) {
+                org.bukkit.block.Block tb = admin.getTargetBlockExact(50);
+                Location loc = tb != null ? tb.getLocation() : admin.getLocation();
+                s.pos2Str = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+                spawnMarker(admin, loc.clone().add(0.5, 1.0, 0.5), "§b§l[POS 2]");
+                admin.sendMessage(ValorantMC.colorize("&bPos2 set to: &e" + s.pos2Str));
+            } else {
+                admin.sendMessage(ValorantMC.colorize("&cNo active setup session. Use /vmapsetup edit <map> first!"));
+            }
+            admin.openInventory(AdminGUI.buildMapSetup(admin, game));
+            return;
+        }
+
+        if (action.equals("map_setsite_a")) {
+            if (s != null) {
+                if (s.pos1Str == null || s.pos2Str == null) {
+                    admin.sendMessage(ValorantMC.colorize("&cSet both Pos1 and Pos2 first! (Left & Right click blocks with Map Wand)"));
+                } else {
+                    s.siteA.clear();
+                    s.siteA.add(s.pos1Str);
+                    s.siteA.add(s.pos2Str);
+                    admin.sendMessage(ValorantMC.colorize("&a&lSet Site A region from &e" + s.pos1Str + " &ato &e" + s.pos2Str + "&a!"));
+                }
+            }
+            admin.openInventory(AdminGUI.buildMapSetup(admin, game));
+            return;
+        }
+
+        if (action.equals("map_setsite_b")) {
+            if (s != null) {
+                if (s.pos1Str == null || s.pos2Str == null) {
+                    admin.sendMessage(ValorantMC.colorize("&cSet both Pos1 and Pos2 first! (Left & Right click blocks with Map Wand)"));
+                } else {
+                    s.siteB.clear();
+                    s.siteB.add(s.pos1Str);
+                    s.siteB.add(s.pos2Str);
+                    admin.sendMessage(ValorantMC.colorize("&a&lSet Site B region from &e" + s.pos1Str + " &ato &e" + s.pos2Str + "&a!"));
+                }
+            }
+            admin.openInventory(AdminGUI.buildMapSetup(admin, game));
+            return;
+        }
+
+        if (action.equals("map_radius_inc") || action.equals("map_radius_dec")) {
+            if (s == null && game != null && game.getMapName() != null && setupCmd != null) {
+                s = setupCmd.getOrCreateSession(admin, game.getMapName());
+            }
+            if (s != null) {
+                if (action.equals("map_radius_inc")) s.siteRadius = Math.min(30.0, s.siteRadius + 1.0);
+                else s.siteRadius = Math.max(1.0, s.siteRadius - 1.0);
+                admin.sendMessage(ValorantMC.colorize("&aSite zone radius set to: &b" + s.siteRadius + " meters&a!"));
+            } else {
+                admin.sendMessage(ValorantMC.colorize("&cNo active setup session. Use /vmapsetup edit <map> first!"));
+            }
+            admin.openInventory(AdminGUI.buildMapSetup(admin, game));
+            return;
+        }
+
         if (action.equals("map_add_atk")) {
-            if (game != null) {
-                Location loc = admin.getLocation().clone();
+            Location loc = admin.getLocation().clone();
+            org.bukkit.block.Block tb = admin.getTargetBlockExact(50);
+            if (tb != null) {
+                loc = tb.getLocation().add(0.5, 1.0, 0.5);
+                loc.setYaw(admin.getLocation().getYaw());
+                loc.setPitch(admin.getLocation().getPitch());
+            }
+            String entry = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ()
+                    + "," + Math.round(loc.getYaw()) + "," + Math.round(loc.getPitch());
+
+            if (s != null) {
+                s.attackSpawns.add(entry);
+                spawnMarker(admin, loc, "§c§l[ATK] Spawn #" + s.attackSpawns.size());
+                admin.sendMessage(ValorantMC.colorize("&a+ Added ATK spawn #" + s.attackSpawns.size() + " to map session '" + s.mapName + "'."));
+            } else if (game != null) {
                 game.addAttackSpawn(loc);
                 spawnMarker(admin, loc, "§c§l[ATK] Spawn #" + game.getAttackSpawnsPublic().size());
-                admin.sendMessage(ValorantMC.colorize("&a+ Added attacker spawn at your location."));
+                admin.sendMessage(ValorantMC.colorize("&a+ Added ATK spawn to current game."));
             } else {
-                admin.sendMessage(ValorantMC.colorize("&cNot in a game. Use /vmapsetup for offline editing."));
+                admin.sendMessage(ValorantMC.colorize("&cNo active setup session. Use /vmapsetup edit <map> first!"));
             }
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
         if (action.equals("map_add_def")) {
-            if (game != null) {
-                Location loc = admin.getLocation().clone();
+            Location loc = admin.getLocation().clone();
+            org.bukkit.block.Block tb = admin.getTargetBlockExact(50);
+            if (tb != null) {
+                loc = tb.getLocation().add(0.5, 1.0, 0.5);
+                loc.setYaw(admin.getLocation().getYaw());
+                loc.setPitch(admin.getLocation().getPitch());
+            }
+            String entry = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ()
+                    + "," + Math.round(loc.getYaw()) + "," + Math.round(loc.getPitch());
+
+            if (s != null) {
+                s.defendSpawns.add(entry);
+                spawnMarker(admin, loc, "§b§l[DEF] Spawn #" + s.defendSpawns.size());
+                admin.sendMessage(ValorantMC.colorize("&a+ Added DEF spawn #" + s.defendSpawns.size() + " to map session '" + s.mapName + "'."));
+            } else if (game != null) {
                 game.addDefendSpawn(loc);
                 spawnMarker(admin, loc, "§b§l[DEF] Spawn #" + game.getDefendSpawnsPublic().size());
-                admin.sendMessage(ValorantMC.colorize("&a+ Added defender spawn at your location."));
+                admin.sendMessage(ValorantMC.colorize("&a+ Added DEF spawn to current game."));
             } else {
-                admin.sendMessage(ValorantMC.colorize("&cNot in a game. Use /vmapsetup for offline editing."));
+                admin.sendMessage(ValorantMC.colorize("&cNo active setup session. Use /vmapsetup edit <map> first!"));
             }
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
         if (action.equals("map_add_siteA")) {
-            if (game != null) {
-                Location loc = admin.getLocation().clone();
+            Location loc = admin.getLocation().clone();
+            org.bukkit.block.Block tb = admin.getTargetBlockExact(50);
+            if (tb != null) {
+                loc = tb.getLocation().add(0.5, 1.0, 0.5);
+            }
+            String entry = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+
+            if (s != null) {
+                s.siteA.add(entry);
+                spawnMarker(admin, loc, "§6§l[SITE A] #" + s.siteA.size());
+                admin.sendMessage(ValorantMC.colorize("&a+ Added Site A #" + s.siteA.size() + " to map session '" + s.mapName + "'."));
+            } else if (game != null) {
                 game.addSiteA(loc);
                 spawnMarker(admin, loc, "§6§l[SITE A] #" + game.getSiteALocations().size());
-                admin.sendMessage(ValorantMC.colorize("&a+ Added Site A at your location."));
+                admin.sendMessage(ValorantMC.colorize("&a+ Added Site A to current game."));
+            } else {
+                admin.sendMessage(ValorantMC.colorize("&cNo active setup session. Use /vmapsetup edit <map> first!"));
             }
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
         if (action.equals("map_add_siteB")) {
-            if (game != null) {
-                Location loc = admin.getLocation().clone();
+            Location loc = admin.getLocation().clone();
+            org.bukkit.block.Block tb = admin.getTargetBlockExact(50);
+            if (tb != null) {
+                loc = tb.getLocation().add(0.5, 1.0, 0.5);
+            }
+            String entry = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+
+            if (s != null) {
+                s.siteB.add(entry);
+                spawnMarker(admin, loc, "§a§l[SITE B] #" + s.siteB.size());
+                admin.sendMessage(ValorantMC.colorize("&a+ Added Site B #" + s.siteB.size() + " to map session '" + s.mapName + "'."));
+            } else if (game != null) {
                 game.addSiteB(loc);
                 spawnMarker(admin, loc, "§a§l[SITE B] #" + game.getSiteBLocations().size());
-                admin.sendMessage(ValorantMC.colorize("&a+ Added Site B at your location."));
+                admin.sendMessage(ValorantMC.colorize("&a+ Added Site B to current game."));
+            } else {
+                admin.sendMessage(ValorantMC.colorize("&cNo active setup session. Use /vmapsetup edit <map> first!"));
             }
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
         if (action.equals("map_save")) {
-            if (game != null && game.getMapName() != null) {
+            if (s != null) {
+                if (s.attackSpawns.size() < 2 || s.defendSpawns.size() < 2 || s.siteA.isEmpty() || s.siteB.isEmpty()) {
+                    admin.sendMessage(ValorantMC.colorize("&cCannot save — map requires at least 2 ATK, 2 DEF, 1 Site A, and 1 Site B!"));
+                } else {
+                    plugin.getMapManager().saveSessionToFile(s.mapName, s.worldName,
+                            s.attackSpawns, s.defendSpawns, s.siteA, s.siteB, s.siteRadius);
+                    plugin.getMapManager().reloadMaps();
+                    if (setupCmd != null) setupCmd.removeSession(admin);
+                    removeMapMarkers(admin);
+                    admin.sendMessage(ValorantMC.colorize("&a&lMap '" + s.mapName + "' saved and loaded successfully!"));
+                }
+            } else if (game != null && game.getMapName() != null) {
                 saveGameMapToFile(admin, game);
-                // Remove glowing markers — the map is saved, setup is complete
                 removeMapMarkers(admin);
             } else {
-                admin.sendMessage(ValorantMC.colorize("&cNo active map to save. Use /vmapsetup for offline config."));
+                admin.sendMessage(ValorantMC.colorize("&cNo active setup session to save. Use /vmapsetup edit <map> first."));
             }
             admin.openInventory(AdminGUI.buildMapSetup(admin, game));
             return;
         }
+
         if (action.equals("map_clear")) {
-            if (game != null) {
+            if (s != null) {
+                s.attackSpawns.clear();
+                s.defendSpawns.clear();
+                s.siteA.clear();
+                s.siteB.clear();
+                removeMapMarkers(admin);
+                admin.sendMessage(ValorantMC.colorize("&cCleared all spawns and sites for setup session '" + s.mapName + "'."));
+            } else if (game != null) {
                 game.clearMapPoints();
                 removeMapMarkers(admin);
                 admin.sendMessage(ValorantMC.colorize("&cCleared all spawns and sites for the current game."));

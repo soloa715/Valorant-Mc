@@ -246,21 +246,65 @@ public class AdminGUI {
         Inventory inv = Bukkit.createInventory(null, 54, TITLE_MAP);
         fill(inv, gray());
 
+        com.valorantmc.commands.MapSetupCommand.SetupSession session = null;
+        try {
+            com.valorantmc.commands.MapSetupCommand setupCmd =
+                (com.valorantmc.commands.MapSetupCommand) Objects.requireNonNull(ValorantMC.getInstance().getCommand("vmapsetup")).getExecutor();
+            session = setupCmd.getActiveSession(admin);
+        } catch (Exception ignored) {}
+
+        String mapName = "none";
+        double siteRadius = 5.0;
+        List<Location> atkSpawns = new ArrayList<>();
+        List<Location> defSpawns = new ArrayList<>();
+        List<Location> siteA     = new ArrayList<>();
+        List<Location> siteB     = new ArrayList<>();
+
+        if (session != null) {
+            mapName = session.mapName;
+            siteRadius = session.siteRadius;
+            World w = Bukkit.getWorld(session.worldName);
+            if (w == null) w = admin.getWorld();
+
+            for (String str : session.attackSpawns) {
+                Location loc = parseSpawnLoc(w, str);
+                if (loc != null) atkSpawns.add(loc);
+            }
+            for (String str : session.defendSpawns) {
+                Location loc = parseSpawnLoc(w, str);
+                if (loc != null) defSpawns.add(loc);
+            }
+            for (String str : session.siteA) {
+                Location loc = parseBlockLoc(w, str);
+                if (loc != null) siteA.add(loc);
+            }
+            for (String str : session.siteB) {
+                Location loc = parseBlockLoc(w, str);
+                if (loc != null) siteB.add(loc);
+            }
+        } else if (game != null && game.getMapName() != null) {
+            mapName = game.getMapName();
+            atkSpawns = game.getAttackSpawnsPublic();
+            defSpawns = game.getDefendSpawnsPublic();
+            siteA = game.getSiteALocations();
+            siteB = game.getSiteBLocations();
+            com.valorantmc.managers.MapManager.ValorantMap vm = ValorantMC.getInstance().getMapManager().getMap(mapName);
+            if (vm != null) siteRadius = vm.getSiteRadius();
+        }
+
         // Header: map name
-        String mapName = game != null && game.getMapName() != null ? game.getMapName() : "none";
         inv.setItem(4, infoItem(Material.MAP, "§e§lMap: §f" + mapName,
+                "§7Radius: §b" + siteRadius + "m",
                 "§7Edit spawn points and",
                 "§7bomb site locations below."));
 
         // Attacker spawns (row 2, left half)
-        inv.setItem(0, infoItem(Material.RED_STAINED_GLASS_PANE, "§c§lAttacker Spawns", ""));
-        List<Location> atkSpawns = game != null ? game.getAttackSpawnsPublic() : new ArrayList<>();
+        inv.setItem(0, infoItem(Material.RED_STAINED_GLASS_PANE, "§c§lAttacker Spawns (" + atkSpawns.size() + ")", ""));
         for (int i = 0; i < 5; i++) {
             if (i < atkSpawns.size()) {
                 Location loc = atkSpawns.get(i);
                 inv.setItem(9 + i, btn(Material.RED_CONCRETE, "§cATK Spawn #" + (i+1),
-                        "§7X: §f" + loc.getBlockX(),
-                        "§7Y: §f" + loc.getBlockY() + " Z: §f" + loc.getBlockZ(),
+                        "§7X: §f" + loc.getBlockX() + " Y: §f" + loc.getBlockY() + " Z: §f" + loc.getBlockZ(),
                         "§eClick §7to teleport there.",
                         "§cShift-click §7to remove.",
                         "map_tp_atk:" + i, null));
@@ -271,14 +315,12 @@ public class AdminGUI {
         }
 
         // Defender spawns (row 2, right half)
-        inv.setItem(8, infoItem(Material.BLUE_STAINED_GLASS_PANE, "§b§lDefender Spawns", ""));
-        List<Location> defSpawns = game != null ? game.getDefendSpawnsPublic() : new ArrayList<>();
+        inv.setItem(8, infoItem(Material.BLUE_STAINED_GLASS_PANE, "§b§lDefender Spawns (" + defSpawns.size() + ")", ""));
         for (int i = 0; i < 5; i++) {
             if (i < defSpawns.size()) {
                 Location loc = defSpawns.get(i);
                 inv.setItem(14 + i, btn(Material.BLUE_CONCRETE, "§bDEF Spawn #" + (i+1),
-                        "§7X: §f" + loc.getBlockX(),
-                        "§7Y: §f" + loc.getBlockY() + " Z: §f" + loc.getBlockZ(),
+                        "§7X: §f" + loc.getBlockX() + " Y: §f" + loc.getBlockY() + " Z: §f" + loc.getBlockZ(),
                         "§eClick §7to teleport there.",
                         "§cShift-click §7to remove.",
                         "map_tp_def:" + i, null));
@@ -289,14 +331,14 @@ public class AdminGUI {
         }
 
         // Bomb site A (row 3)
-        inv.setItem(18, infoItem(Material.ORANGE_STAINED_GLASS_PANE, "§6§lSite A Locations", ""));
-        List<Location> siteA = game != null ? game.getSiteALocations() : new ArrayList<>();
+        inv.setItem(18, infoItem(Material.ORANGE_STAINED_GLASS_PANE, "§6§lSite A Locations (" + siteA.size() + ")", ""));
         for (int i = 0; i < 4; i++) {
             if (i < siteA.size()) {
                 Location loc = siteA.get(i);
                 inv.setItem(19 + i, btn(Material.ORANGE_CONCRETE, "§6Site A #" + (i+1),
                         "§7X: §f" + loc.getBlockX() + " Y: §f" + loc.getBlockY() + " Z: §f" + loc.getBlockZ(),
                         "§eClick §7to teleport.",
+                        "§cShift-click §7to remove.",
                         "map_tp_siteA:" + i, null));
             } else {
                 inv.setItem(19 + i, btn(Material.ORANGE_STAINED_GLASS_PANE, "§8Empty Site A Slot",
@@ -305,14 +347,14 @@ public class AdminGUI {
         }
 
         // Bomb site B (row 4)
-        inv.setItem(27, infoItem(Material.GREEN_STAINED_GLASS_PANE, "§a§lSite B Locations", ""));
-        List<Location> siteB = game != null ? game.getSiteBLocations() : new ArrayList<>();
+        inv.setItem(27, infoItem(Material.GREEN_STAINED_GLASS_PANE, "§a§lSite B Locations (" + siteB.size() + ")", ""));
         for (int i = 0; i < 4; i++) {
             if (i < siteB.size()) {
                 Location loc = siteB.get(i);
                 inv.setItem(28 + i, btn(Material.GREEN_CONCRETE, "§aSite B #" + (i+1),
                         "§7X: §f" + loc.getBlockX() + " Y: §f" + loc.getBlockY() + " Z: §f" + loc.getBlockZ(),
                         "§eClick §7to teleport.",
+                        "§cShift-click §7to remove.",
                         "map_tp_siteB:" + i, null));
             } else {
                 inv.setItem(28 + i, btn(Material.GREEN_STAINED_GLASS_PANE, "§8Empty Site B Slot",
@@ -333,15 +375,52 @@ public class AdminGUI {
         inv.setItem(39, btn(Material.GREEN_DYE,  "§a+ Add Site B",
                 "§7Records your current location",
                 "§7as a bomb-site B point.", "map_add_siteB", null));
+        inv.setItem(40, btn(Material.GOLDEN_HOE, "§6§lGet Map Wand",
+                "§7Gives you the Map Wand for",
+                "§7right-clicking blocks.", "map_get_wand", null));
         inv.setItem(41, btn(Material.WRITABLE_BOOK, "§eSave Map",
                 "§7Saves changes to the map YAML",
                 "§7and hot-reloads it.", "map_save", null));
         inv.setItem(42, btn(Material.TNT,        "§cClear All Spawns",
                 "§7Removes ALL spawn and site",
                 "§7data for this map. §c§lCannot undo!", "map_clear", null));
+        inv.setItem(43, btn(Material.SLIME_BALL,  "§b§lSite Radius +1m",
+                "§7Current radius: §b" + siteRadius + "m", "map_radius_inc", null));
+        inv.setItem(44, btn(Material.MAGMA_CREAM, "§c§lSite Radius -1m",
+                "§7Current radius: §b" + siteRadius + "m", "map_radius_dec", null));
         inv.setItem(49, btn(Material.ARROW,      "§7Back", "§7Return to admin panel.", "back_main", null));
 
         return inv;
+    }
+
+    public static Location parseSpawnLoc(World world, String s) {
+        if (s == null || s.isEmpty()) return null;
+        String[] parts = s.split(",");
+        if (parts.length < 3) return null;
+        try {
+            double x = Double.parseDouble(parts[0]) + 0.5;
+            double y = Double.parseDouble(parts[1]);
+            double z = Double.parseDouble(parts[2]) + 0.5;
+            float yaw = parts.length > 3 ? Float.parseFloat(parts[3]) : 0f;
+            float pitch = parts.length > 4 ? Float.parseFloat(parts[4]) : 0f;
+            return new Location(world, x, y, z, yaw, pitch);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    public static Location parseBlockLoc(World world, String s) {
+        if (s == null || s.isEmpty()) return null;
+        String[] parts = s.split(",");
+        if (parts.length < 3) return null;
+        try {
+            double x = Double.parseDouble(parts[0]) + 0.5;
+            double y = Double.parseDouble(parts[1]);
+            double z = Double.parseDouble(parts[2]) + 0.5;
+            return new Location(world, x, y, z);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     // ── Game Control ──────────────────────────────────────────────────────────
@@ -397,6 +476,11 @@ public class AdminGUI {
     public static ItemStack btn(Material mat, String name, String lore1, String lore2,
                                 String action, String target) {
         return btn(mat, name, lore1, lore2, null, null, action, target);
+    }
+
+    public static ItemStack btn(Material mat, String name, String lore1, String lore2,
+                                String lore3, String action, String target) {
+        return btn(mat, name, lore1, lore2, lore3, null, action, target);
     }
 
     public static ItemStack btn(Material mat, String name, String lore1, String lore2,
