@@ -29,17 +29,23 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
 
         // Alias commands
         switch (cmd.getName().toLowerCase()) {
-            case "vshop"      -> { return handleShop(sender); }
-            case "vagent"     -> { return handleAgent(sender); }
-            case "vstats"     -> { return handleStats(sender, args); }
-            case "vreload"    -> { return handleReloadWeapon(sender); }
-            case "vdropspike" -> { return handleDropSpike(sender); }
-            case "vwalk"      -> { return handleWalkToggle(sender); }
-            case "vuse"       -> { return handleUseAbility(sender, args); }
-            case "vskin"      -> { return handleSkinGui(sender); }
-            case "vplay"      -> { return handlePlayLobby(sender); }
-            case "vcustom"    -> { return handleCustomGame(sender); }
-            case "vskip"      -> { return handleSkipVote(sender); }
+            case "vshop"       -> { return handleShop(sender); }
+            case "vagent"      -> { return handleAgent(sender); }
+            case "vstats"      -> { return handleStats(sender, args); }
+            case "vreload"     -> { return handleReloadWeapon(sender); }
+            case "vdropspike"  -> { return handleDropSpike(sender); }
+            case "vwalk"       -> { return handleWalkToggle(sender); }
+            case "vuse"        -> { return handleUseAbility(sender, args); }
+            case "vskin"       -> { return handleSkinGui(sender); }
+            case "vplay"       -> { return handlePlayLobby(sender); }
+            case "vcustom"     -> { return handleCustomGame(sender); }
+            case "vskip"       -> { return handleSkipVote(sender); }
+            case "vscoreboard" -> { return handleScoreboard(sender); }
+            case "vspec"       -> { return handleSpec(sender); }
+            case "vstart"      -> { return handleStart(sender, args); }
+            case "vjoin"       -> { return handleJoin(sender, args); }
+            case "vleave"      -> { return handleLeave(sender); }
+            case "vquick"      -> { return handleJoin(sender, new String[]{"join", "default"}); }
         }
 
         // Main /valorant command
@@ -385,6 +391,52 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ValorantMC.colorize("&6/valorant start <id> <map> &7— Start game on map"));
             sender.sendMessage(ValorantMC.colorize("&6/valorant reload          &7— Reload config"));
         }
+    }
+
+    private boolean handleScoreboard(CommandSender sender) {
+        if (!(sender instanceof Player p)) return true;
+        ValorantGame game = plugin.getGameManager().getGame(p);
+        if (game == null) {
+            p.sendMessage(ValorantMC.colorize("&cYou are not currently in a game!"));
+            return true;
+        }
+        p.sendMessage(ValorantMC.colorize("&b=== Match Scoreboard ==="));
+        p.sendMessage(ValorantMC.colorize("&7Round: &f" + game.getCurrentRound() + " &8| &7State: &e" + game.getState()));
+        p.sendMessage(ValorantMC.colorize("&cAttackers: &f" + game.getAttackers().getRoundWins() + " wins"));
+        for (Player attacker : game.getAttackers().getOnlinePlayers()) {
+            boolean dead = game.getAttackers().isDead(attacker);
+            p.sendMessage(ValorantMC.colorize("  &c• " + attacker.getName() + (dead ? " &8[DEAD]" : " &a[ALIVE]")));
+        }
+        p.sendMessage(ValorantMC.colorize("&bDefenders: &f" + game.getDefenders().getRoundWins() + " wins"));
+        for (Player defender : game.getDefenders().getOnlinePlayers()) {
+            boolean dead = game.getDefenders().isDead(defender);
+            p.sendMessage(ValorantMC.colorize("  &b• " + defender.getName() + (dead ? " &8[DEAD]" : " &a[ALIVE]")));
+        }
+        return true;
+    }
+
+    private boolean handleSpec(CommandSender sender) {
+        if (!(sender instanceof Player p)) return true;
+        ValorantGame game = plugin.getGameManager().getGame(p);
+        if (game == null) return true;
+        com.valorantmc.game.ValorantTeam team = game.getTeam(p);
+        if (team == null || !team.isDead(p)) {
+            p.sendMessage(ValorantMC.colorize("&cYou are not dead!"));
+            return true;
+        }
+        List<Player> alive = team.getOnlinePlayers().stream().filter(pl -> !team.isDead(pl)).toList();
+        if (alive.isEmpty()) {
+            p.sendMessage(ValorantMC.colorize("&7No alive teammates to spectate."));
+            return true;
+        }
+        Player current = (Player) p.getSpectatorTarget();
+        int idx = 0;
+        if (current != null && alive.contains(current)) {
+            idx = (alive.indexOf(current) + 1) % alive.size();
+        }
+        p.setSpectatorTarget(alive.get(idx));
+        p.sendMessage(ValorantMC.colorize("&7Spectating &f" + alive.get(idx).getName()));
+        return true;
     }
 
     // ── Tab completion ────────────────────────────────────────────────────────

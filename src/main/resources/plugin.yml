@@ -58,6 +58,26 @@ commands:
     aliases: [mapsetup, vmap]
     usage: /vmapsetup <create|addspawn|addsite|setworld|save|list|validate|tp|wand>
     permission: valorantmc.admin
+  vscoreboard:
+    description: View match scoreboard
+    aliases: [scoreboard]
+    usage: /vscoreboard
+  vspec:
+    description: Spectate alive teammates
+    aliases: [spec]
+    usage: /vspec
+  vstart:
+    description: Start the game
+    usage: /vstart [id] [map]
+  vjoin:
+    description: Join a game
+    usage: /vjoin [id] [team]
+  vleave:
+    description: Leave current game
+    usage: /vleave
+  vquick:
+    description: Quick play matchmaking
+    usage: /vquick
 
 permissions:
   valorantmc.admin:

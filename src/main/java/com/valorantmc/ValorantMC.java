@@ -76,6 +76,12 @@ public final class ValorantMC extends JavaPlugin {
         getCommand("vskin").setExecutor(cmd);
         getCommand("vplay").setExecutor(cmd);
         getCommand("vcustom").setExecutor(cmd);
+        if (getCommand("vscoreboard") != null) getCommand("vscoreboard").setExecutor(cmd);
+        if (getCommand("vspec") != null)       getCommand("vspec").setExecutor(cmd);
+        if (getCommand("vstart") != null)      getCommand("vstart").setExecutor(cmd);
+        if (getCommand("vjoin") != null)       getCommand("vjoin").setExecutor(cmd);
+        if (getCommand("vleave") != null)      getCommand("vleave").setExecutor(cmd);
+        if (getCommand("vquick") != null)      getCommand("vquick").setExecutor(cmd);
         Objects.requireNonNull(getCommand("vmapsetup")).setExecutor(new com.valorantmc.commands.MapSetupCommand(this));
         Objects.requireNonNull(getCommand("vadmin")).setExecutor(
                 (sender, cmd2, label, args) -> {
