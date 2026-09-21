@@ -141,13 +141,25 @@ public class Weapon {
 
     // ── Static helpers ────────────────────────────────────────────────────────
 
-    /** Returns null if the item is not a ValorantMC weapon */
     public static WeaponType getWeaponType(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return null;
         String val = item.getItemMeta().getPersistentDataContainer()
                 .get(KEY_WEAPON_TYPE, PersistentDataType.STRING);
-        if (val == null) return null;
-        try { return WeaponType.valueOf(val); } catch (Exception e) { return null; }
+        if (val != null) {
+            try { return WeaponType.valueOf(val); } catch (Exception ignored) {}
+        }
+        try {
+            String metaStr = item.getItemMeta().getAsString().toUpperCase();
+            for (WeaponType wt : WeaponType.values()) {
+                if (metaStr.contains("VALORANT:" + wt.name()) || metaStr.contains("VALORANT:" + wt.name().toLowerCase())) {
+                    return wt;
+                }
+            }
+            if (metaStr.contains("KARAMBIT") || metaStr.contains("WTYJ")) {
+                return WeaponType.KNIFE;
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     public static int getStoredAmmo(ItemStack item) {

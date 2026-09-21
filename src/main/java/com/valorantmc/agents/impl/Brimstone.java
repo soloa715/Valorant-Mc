@@ -74,7 +74,7 @@ public class Brimstone extends Agent {
                     if (!game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                     if (p.getLocation().distance(loc) <= 5) {
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.HASTE, 40, 1, false, false));
+                                org.bukkit.potion.PotionEffectType.FAST_DIGGING, 40, 1, false, false));
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.SPEED, 40, 0, false, false));
                     }
@@ -98,7 +98,7 @@ public class Brimstone extends Agent {
         new BukkitRunnable() {
             @Override public void run() {
                 current[0] = current[0].clone().add(0, -1, 0);
-                current[0].getWorld().spawnParticle(Particle.LARGE_SMOKE, current[0], 5, 0.2, 0.2, 0.2, 0.01);
+                current[0].getWorld().spawnParticle(Particle.SMOKE_LARGE, current[0], 5, 0.2, 0.2, 0.2, 0.01);
                 if (current[0].getBlockY() <= target.getBlockY()) {
                     // Start smoke cloud
                     startSmokeCloud(target, player, game);
@@ -114,7 +114,7 @@ public class Brimstone extends Agent {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 240) { cancel(); return; }
-                center.getWorld().spawnParticle(Particle.LARGE_SMOKE, center, 15, 1.5, 1.5, 1.5, 0.01);
+                center.getWorld().spawnParticle(Particle.SMOKE_LARGE, center, 15, 1.5, 1.5, 1.5, 0.01);
                 ticks += 3;
             }
         }.runTaskTimer(ValorantMC.getInstance(), 0L, 3L);

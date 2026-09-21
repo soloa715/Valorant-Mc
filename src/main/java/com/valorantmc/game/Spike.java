@@ -188,7 +188,7 @@ public class Spike {
             plantLocation.getWorld().createExplosion(plantLocation, 0f, false, false);
             plantLocation.getWorld().playSound(plantLocation, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.5f);
             // Visual: spawn lots of fireworks/particles
-            plantLocation.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, plantLocation, 20);
+            plantLocation.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, plantLocation, 20);
             plantLocation.getWorld().spawnParticle(Particle.FLAME, plantLocation, 80, 3, 3, 3, 0.2);
         }
 

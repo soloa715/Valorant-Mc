@@ -27,7 +27,7 @@ public class LobbyManager {
         p.setHealth(20);
         p.setFoodLevel(20);
         p.getInventory().clear();
-        p.clearActivePotionEffects();
+        p.getActivePotionEffects().forEach(effect -> p.removePotionEffect(effect.getType()));
         p.setFlying(false);
         p.setAllowFlight(false);
 

@@ -75,10 +75,10 @@ public class Sage extends Agent {
                 player.getWorld().spawnParticle(Particle.SNOWFLAKE, target.clone().add(0, 0.5, 0), 10, 2, 0.3, 2, 0);
                 for (Player nearby : target.getWorld().getPlayers()) {
                     if (nearby.getLocation().distance(target) <= 3.5) {
-                        nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 2, false, false));
+                        nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 2, false, false));
                         if (game.getTeam(nearby) != null && game.getTeam(player) != null &&
                                 !game.getTeam(nearby).getSide().equals(game.getTeam(player).getSide())) {
-                            nearby.sendActionBar(ValorantMC.colorize("&b[Slow] &fSage's Slow Orb!"));
+                            ValorantMC.sendActionBar(nearby, "&b[Slow] &fSage's Slow Orb!");
                         }
                     }
                 }

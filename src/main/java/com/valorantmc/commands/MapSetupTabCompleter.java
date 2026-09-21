@@ -25,7 +25,7 @@ public class MapSetupTabCompleter implements TabCompleter {
     );
 
     private static final List<String> TEAMS = Arrays.asList("atk", "def");
-    private static final List<String> SITES = Arrays.asList("a", "b");
+    private static final List<String> SITES = Arrays.asList("a", "b", "c");
 
     public MapSetupTabCompleter(ValorantMC plugin) {
         this.plugin = plugin;

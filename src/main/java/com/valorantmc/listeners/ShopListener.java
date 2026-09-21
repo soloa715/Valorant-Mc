@@ -61,7 +61,12 @@ public class ShopListener implements Listener {
                 case "agent" -> {
                     ValorantGame agentGame = plugin.getGameManager().getGame(player);
                     if (agentGame != null) {
-                        player.openInventory(AgentSelectGUI.build(player));
+                        if (plugin.getFabricChannelListener() != null && plugin.getFabricChannelListener().hasMod(player)) {
+                            player.closeInventory();
+                            plugin.getFabricChannelListener().sendAgentSelect(player);
+                        } else {
+                            player.openInventory(AgentSelectGUI.build(player));
+                        }
                     } else {
                         player.sendMessage(ValorantMC.colorize(
                                 "&7You can pick your agent once you join a game."));
@@ -158,7 +163,14 @@ public class ShopListener implements Listener {
                     player.closeInventory();
                     plugin.getGameManager().quickPlay(player);
                 }
-                case "agent" -> player.openInventory(AgentSelectGUI.build(player));
+                case "agent" -> {
+                    if (plugin.getFabricChannelListener() != null && plugin.getFabricChannelListener().hasMod(player)) {
+                        player.closeInventory();
+                        plugin.getFabricChannelListener().sendAgentSelect(player);
+                    } else {
+                        player.openInventory(AgentSelectGUI.build(player));
+                    }
+                }
                 case "skins" -> player.openInventory(com.valorantmc.shop.SkinGUI.build(player, null));
                 case "stats" -> {
                     player.closeInventory();
@@ -174,13 +186,48 @@ public class ShopListener implements Listener {
             if (clicked == null) return;
 
             ValorantGame game = plugin.getGameManager().getGame(player);
-            if (game == null) return;
+            if (game != null && game.getState() != com.valorantmc.game.GameState.BUY_PHASE) {
+                player.sendMessage(ValorantMC.colorize("&cThe shop is only available during the Buy Phase!"));
+                player.closeInventory();
+                return;
+            }
 
-            // Weapon purchase
+            boolean isRightClick = e.isRightClick();
+
+            // Refund button
+            if (clicked.hasItemMeta() && Boolean.TRUE.equals(clicked.getItemMeta().getPersistentDataContainer()
+                    .get(new NamespacedKey(plugin, "shop_refund"), PersistentDataType.BOOLEAN))) {
+                plugin.getShopManager().refundLatest(player, game);
+                player.openInventory(ShopGUI.build(player));
+                return;
+            }
+
+            // Buy for teammate button
+            if (clicked.hasItemMeta() && clicked.getItemMeta().getPersistentDataContainer()
+                    .has(new NamespacedKey(plugin, "shop_buyfor_player"), PersistentDataType.STRING)) {
+                String targetName = clicked.getItemMeta().getPersistentDataContainer()
+                        .get(new NamespacedKey(plugin, "shop_buyfor_player"), PersistentDataType.STRING);
+                String weaponStr = clicked.getItemMeta().getPersistentDataContainer()
+                        .get(new NamespacedKey(plugin, "shop_buyfor_weapon"), PersistentDataType.STRING);
+                org.bukkit.entity.Player target = org.bukkit.Bukkit.getPlayer(targetName);
+                if (target != null && weaponStr != null) {
+                    try {
+                        WeaponType wt = WeaponType.valueOf(weaponStr);
+                        plugin.getShopManager().buyForTeammate(player, target, wt, game);
+                    } catch (Exception ignored) {}
+                }
+                player.openInventory(ShopGUI.build(player));
+                return;
+            }
+
+            // Weapon purchase or request
             WeaponType type = ShopGUI.getWeaponFromShopItem(clicked);
             if (type != null) {
-                plugin.getShopManager().buyWeapon(player, type, game);
-                // Refresh shop
+                if (isRightClick) {
+                    plugin.getShopManager().requestWeapon(player, type, game);
+                } else {
+                    plugin.getShopManager().buyWeapon(player, type, game);
+                }
                 player.openInventory(ShopGUI.build(player));
                 return;
             }
@@ -188,8 +235,12 @@ public class ShopListener implements Listener {
             // Armor purchase
             String armorId = ShopGUI.getArmorFromShopItem(clicked);
             if (armorId != null) {
-                if (armorId.equals("light_shield")) plugin.getShopManager().buyLightArmor(player, game);
-                else if (armorId.equals("heavy_shield")) plugin.getShopManager().buyHeavyArmor(player, game);
+                if (isRightClick) {
+                    plugin.getShopManager().refundItem(player, armorId, game);
+                } else {
+                    if (armorId.equals("light_shield")) plugin.getShopManager().buyLightArmor(player, game);
+                    else if (armorId.equals("heavy_shield")) plugin.getShopManager().buyHeavyArmor(player, game);
+                }
                 player.openInventory(ShopGUI.build(player));
                 return;
             }
@@ -197,8 +248,7 @@ public class ShopListener implements Listener {
             // Ability purchase
             Character abilityKey = ShopGUI.getAbilityKeyFromShopItem(clicked);
             if (abilityKey != null) {
-                // Double-buy prevention: check before delegating to ShopManager
-                com.valorantmc.agents.Agent agent = game.getAgent(player);
+                com.valorantmc.agents.Agent agent = (game != null) ? game.getAgent(player) : plugin.getAgentManager().getAgent(player);
                 if (agent != null) {
                     com.valorantmc.agents.Agent.Ability ability = switch (abilityKey) {
                         case 'C' -> agent.getAbilityC();
@@ -217,6 +267,7 @@ public class ShopListener implements Listener {
                 plugin.getShopManager().buyAbility(player, abilityKey, game);
                 player.openInventory(ShopGUI.build(player));
             }
+            return;
         }
 
         // ── Skin GUI ──────────────────────────────────────────────────────────
@@ -232,7 +283,14 @@ public class ShopListener implements Listener {
                 return;
             }
 
-            if (!clicked.hasItemMeta()) return;
+            // Reset to default button
+            if (clicked.getType() == org.bukkit.Material.BARRIER) {
+                plugin.getSkinManager().resetAllEquipped(player.getUniqueId());
+                player.sendMessage(ValorantMC.colorize("&aReset all weapon skins to default."));
+                player.openInventory(com.valorantmc.shop.SkinGUI.build(player, null));
+                return;
+            }
+
             String name = clicked.getItemMeta().getDisplayName();
             String stripped = org.bukkit.ChatColor.stripColor(name);
             // Find skin by display name
@@ -240,23 +298,21 @@ public class ShopListener implements Listener {
                     plugin.getSkinManager().getAllSkins()) {
                 if (skin.displayName().equalsIgnoreCase(stripped)) {
                     if (!plugin.getSkinManager().hasSkin(player.getUniqueId(), skin.id())) {
-                        player.sendMessage(ValorantMC.colorize("&cYou don't own this skin."));
-                        return;
+                        // Attempt to buy skin
+                        plugin.getShopManager().buySkin(player, skin.id());
+                    } else {
+                        // Equip skin
+                        plugin.getSkinManager().equipSkin(player.getUniqueId(), skin.id());
+                        player.sendMessage(ValorantMC.colorize("&aEquipped &f" + skin.displayName()));
+
+                        if (skin.weaponType() == WeaponType.KNIFE) {
+                            plugin.getWeaponManager().giveTaCZWeapon(player, WeaponType.KNIFE, 2);
+                        } else {
+                            int slot = (skin.weaponType().getCategory() == com.valorantmc.weapons.WeaponCategory.SIDEARM) ? 1 : 0;
+                            plugin.getWeaponManager().giveTaCZWeapon(player, skin.weaponType(), slot);
+                        }
                     }
-                    // Apply to the held weapon if it matches this skin's weapon type
-                    ItemStack held = player.getInventory().getItemInMainHand();
-                    WeaponType heldType = com.valorantmc.weapons.Weapon.getWeaponType(held);
-                    if (heldType != skin.weaponType()) {
-                        player.sendMessage(ValorantMC.colorize(
-                                "&eHold a " + skin.weaponType().getDisplayName() + " to apply this skin."));
-                        return;
-                    }
-                    org.bukkit.inventory.meta.ItemMeta meta = held.getItemMeta();
-                    if (meta == null) return;
-                    meta.setCustomModelData(skin.customModelId());
-                    held.setItemMeta(meta);
-                    player.sendMessage(ValorantMC.colorize("&aEquipped &f" + skin.displayName()));
-                    player.closeInventory();
+                    player.openInventory(com.valorantmc.shop.SkinGUI.build(player, skin.weaponType()));
                     return;
                 }
             }
@@ -268,11 +324,15 @@ public class ShopListener implements Listener {
             e.setCancelled(true);
             if (clicked == null) return;
 
+            ValorantGame game = plugin.getGameManager().getGame(player);
+            if (game != null && game.getState() != com.valorantmc.game.GameState.AGENT_SELECT) {
+                player.sendMessage(ValorantMC.colorize("&cYou cannot change agents mid-game!"));
+                player.closeInventory();
+                return;
+            }
+
             String agentName = AgentSelectGUI.getAgentFromItem(clicked);
             if (agentName == null) return;
-
-            ValorantGame game = plugin.getGameManager().getGame(player);
-            if (game == null) return;
 
             com.valorantmc.agents.Agent agent =
                     plugin.getAgentManager().createInstance(agentName);
@@ -281,11 +341,13 @@ public class ShopListener implements Listener {
                 return;
             }
 
-            game.setAgent(player, agent);
+            if (game != null) {
+                game.setAgent(player, agent);
+            }
+            plugin.getAgentManager().setPlayerAgent(player, agent);
             agent.giveAbilityItems(player);
             player.sendMessage(plugin.msg("agents.selected").replace("{agent}", agent.getDisplayName()));
             player.closeInventory();
-            // Shop will be opened automatically when buy phase starts — no premature open here
         }
     }
 
@@ -303,6 +365,9 @@ public class ShopListener implements Listener {
         if (game == null) return;
         if (game.getState() != com.valorantmc.game.GameState.AGENT_SELECT) return;
         if (game.getAgent(player) != null) return; // already picked
+
+        // If player has the companion mod, do not force the vanilla chest GUI back open!
+        if (plugin.getFabricChannelListener() != null && plugin.getFabricChannelListener().hasMod(player)) return;
 
         // Reopen next tick — Bukkit doesn't allow opening during the close event
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {

@@ -1,9 +1,17 @@
 package com.valorantmc.managers;
 
 import com.valorantmc.ValorantMC;
+import com.valorantmc.game.CustomGameSettings;
+import com.valorantmc.game.ValorantGame;
+import com.valorantmc.game.ValorantTeam;
 import com.valorantmc.weapons.Weapon;
+import com.valorantmc.weapons.WeaponCategory;
 import com.valorantmc.weapons.WeaponType;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 
@@ -42,8 +50,151 @@ public class WeaponManager {
         heldWeapons.put(p.getUniqueId(), weapon);
         if (addToInventory) {
             int slot = p.getInventory().getHeldItemSlot();
-            p.getInventory().setItem(slot, weapon.toItemStack(p.getUniqueId()));
+            giveTaCZWeapon(p, type, slot);
         }
+    }
+
+    public static String getTaCZGunId(WeaponType type) {
+        return switch (type) {
+            case CLASSIC  -> "valorant:classic";
+            case SHORTY   -> "tacz:db_short";
+            case FRENZY   -> "tacz:cz75";
+            case GHOST    -> "valorant:ghost";
+            case SHERIFF  -> "valorant:sheriff";
+            case STINGER  -> "tacz:vector45";
+            case SPECTRE  -> "tacz:hk_mp5a5";
+            case BUCKY    -> "tacz:m870";
+            case JUDGE    -> "valorant:judge";
+            case BULLDOG  -> "tacz:fn_fal";
+            case GUARDIAN -> "tacz:mk14";
+            case PHANTOM  -> "valorant:phantom";
+            case VANDAL   -> "valorant:vandal";
+            case MARSHAL  -> "tacz:m700";
+            case OUTLAW   -> "valorant:outlaw";
+            case OPERATOR -> "valorant:operator";
+            case ARES     -> "tacz:rpk";
+            case ODIN     -> "valorant:odin";
+            case KNIFE    -> "wtyj:eternal_karambit";
+        };
+    }
+
+    public static String getTaCZAmmoId(WeaponType type) {
+        return switch (type) {
+            case CLASSIC, FRENZY, STINGER, SPECTRE -> "tacz:9mm";
+            case GHOST                             -> "tacz:45acp";
+            case SHERIFF                           -> "tacz:357mag";
+            case SHORTY, BUCKY, JUDGE, OUTLAW      -> "tacz:12g";
+            case BULLDOG, GUARDIAN, VANDAL         -> "tacz:762x39";
+            case PHANTOM                           -> "tacz:556x45";
+            case MARSHAL                           -> "tacz:308";
+            case OPERATOR                          -> "tacz:338";
+            case ARES, ODIN                        -> "tacz:762x54";
+            case KNIFE                             -> "tacz:9mm";
+        };
+    }
+
+    public static ItemStack createTaCZItem(String gunId, String skinId, String displayName, List<String> lore) {
+        Material mat = Material.matchMaterial("tacz:modern_kinetic_gun");
+        if (mat == null) {
+            mat = Material.IRON_SWORD;
+        }
+        ItemStack item = new ItemStack(mat);
+        StringBuilder nbt = new StringBuilder("{GunId:\"").append(gunId).append("\"");
+        if (skinId != null && !skinId.isEmpty()) {
+            nbt.append(",Skin:\"").append(skinId).append("\"");
+        }
+        nbt.append(",HasBulletInBarrel:1b,GunCurrentAmmoCount:1,DummyAmmo:0}");
+        try {
+            item = org.bukkit.Bukkit.getUnsafe().modifyItemStack(item, nbt.toString());
+        } catch (Throwable ignored) {}
+
+        org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            if (displayName != null && !displayName.isEmpty()) {
+                meta.setDisplayName(ValorantMC.colorize(displayName));
+            }
+            if (lore != null && !lore.isEmpty()) {
+                List<String> colored = new ArrayList<>();
+                for (String l : lore) colored.add(ValorantMC.colorize(l));
+                meta.setLore(colored);
+            }
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public void giveTaCZWeapon(Player p, WeaponType type, int slot) {
+        if (type.isMelee()) {
+            String knifeGunId = "wtyj:eternal_karambit";
+            int customModelData = type.getCustomModelId();
+            if (plugin.getSkinManager() != null) {
+                String equipped = plugin.getSkinManager().getEquippedSkin(p.getUniqueId(), WeaponType.KNIFE);
+                if (equipped != null) {
+                    SkinManager.SkinData sd = plugin.getSkinManager().getSkin(equipped);
+                    if (sd != null) {
+                        if (sd.taczGunId() != null) knifeGunId = sd.taczGunId();
+                        if (sd.customModelId() > 0) customModelData = sd.customModelId();
+                    }
+                }
+            }
+
+            String nbt = "{MeleeWeaponId:\"" + knifeGunId + "\",CustomModelData:" + customModelData + ",PublicBukkitValues:{\"valorantmc:weapon_type\":\"KNIFE\"}}";
+            String cmd = "item replace entity " + p.getName() + " hotbar." + slot + " with lrtactical:melee" + nbt + " 1";
+            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), cmd);
+            return;
+        }
+
+        String gunId = getTaCZGunId(type);
+        String skinTag = "";
+        int customModelData = type.getCustomModelId();
+        String skinDisplayName = type.getDisplayName();
+        if (plugin.getSkinManager() != null) {
+            String equipped = plugin.getSkinManager().getEquippedSkin(p.getUniqueId(), type);
+            if (equipped != null) {
+                SkinManager.SkinData sd = plugin.getSkinManager().getSkin(equipped);
+                if (sd != null) {
+                    if (sd.displayName() != null) {
+                        skinDisplayName = sd.displayName();
+                    }
+                    if (sd.customModelId() > 0) {
+                        customModelData = sd.customModelId();
+                    }
+                    if (sd.taczSkinId() != null && !sd.taczSkinId().isEmpty() && !sd.taczSkinId().startsWith("valorant:")) {
+                        skinTag = ",Skin:\"" + sd.taczSkinId() + "\"";
+                    }
+                }
+            }
+        }
+
+        int mag = Math.max(1, type.getMagazineSize());
+        int reserve = mag * 4;
+
+        if (customModelData != type.getCustomModelId()) {
+            // Player equipped a custom skin! Give item with CustomModelData for authentic skin texture
+            String matName = type.getMaterial().name().toLowerCase();
+            String nbt = "{CustomModelData:" + customModelData
+                    + ",GunId:\"" + gunId + "\""
+                    + ",HasBulletInBarrel:1b,GunCurrentAmmoCount:" + mag
+                    + ",DummyAmmo:" + reserve + ",MaxDummyAmmo:" + (mag * 10)
+                    + ",display:{Name:'{\"text\":\"" + skinDisplayName + "\",\"color\":\"yellow\",\"italic\":false}'}"
+                    + ",PublicBukkitValues:{\"valorantmc:weapon_type\":\"" + type.name() + "\",\"valorantmc:weapon_ammo\":" + mag + ",\"valorantmc:weapon_reserve\":" + reserve + "}}";
+            String cmd = "item replace entity " + p.getName() + " hotbar." + slot + " with minecraft:" + matName + nbt + " 1";
+            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), cmd);
+        } else {
+            // Default skin -> give TACZ 3D gun
+            String nbt = "{GunId:\"" + gunId + "\"" + skinTag
+                    + ",HasBulletInBarrel:1b,GunCurrentAmmoCount:" + mag
+                    + ",DummyAmmo:" + reserve + ",MaxDummyAmmo:" + (mag * 10)
+                    + ",PublicBukkitValues:{\"valorantmc:weapon_type\":\"" + type.name() + "\"}}";
+            String cmd = "item replace entity " + p.getName() + " hotbar." + slot + " with tacz:modern_kinetic_gun" + nbt + " 1";
+            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), cmd);
+        }
+
+        // Put matching ammo in upper inventory (container.0 or container.1), never in hotbar!
+        String ammoId = getTaCZAmmoId(type);
+        int containerSlot = (type.getCategory() == com.valorantmc.weapons.WeaponCategory.SIDEARM) ? 1 : 0;
+        plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(),
+                "item replace entity " + p.getName() + " container." + containerSlot + " with tacz:ammo{AmmoId:\"" + ammoId + "\"} 64");
     }
 
     // ── Shooting ─────────────────────────────────────────────────────────────
@@ -105,11 +256,11 @@ public class WeaponManager {
         if (reloadEnd.containsKey(uuid) && now < reloadEnd.get(uuid)) return false;
         if (weapon.isReloading()) return false;
         if (weapon.getCurrentAmmo() >= weapon.getType().getMagazineSize()) {
-            p.sendActionBar(net.kyori.adventure.text.Component.text("§eAmmo is full!"));
+            ValorantMC.sendActionBar(p, "&eAmmo is full!");
             return false;
         }
         if (weapon.getReserveAmmo() <= 0) {
-            p.sendActionBar(net.kyori.adventure.text.Component.text("§cNo reserve ammo!"));
+            ValorantMC.sendActionBar(p, "&cNo reserve ammo!");
             return false;
         }
 
@@ -120,8 +271,7 @@ public class WeaponManager {
 
         // Reload sound
         p.playSound(p.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_LOADING_MIDDLE, 0.8f, 1.5f);
-        p.sendActionBar(net.kyori.adventure.text.Component.text(
-                "§6Reloading §f" + weapon.getType().getDisplayName() + "§8..."));
+        ValorantMC.sendActionBar(p, "&6Reloading &f" + weapon.getType().getDisplayName() + "&8...");
 
         // Action bar countdown while reloading
         final long endTime = now + reloadMs;
@@ -132,9 +282,8 @@ public class WeaponManager {
             if (remaining <= 0) { task.cancel(); return; }
             float pct = (float) remaining / reloadMs;
             int filled = (int)((1f - pct) * 10);
-            String bar = "§a" + "█".repeat(filled) + "§8" + "█".repeat(10 - filled);
-            p.sendActionBar(net.kyori.adventure.text.Component.text(
-                    "§6Reloading §f" + weapon.getType().getDisplayName() + " " + bar));
+            String bar = "&a" + "█".repeat(filled) + "&8" + "█".repeat(10 - filled);
+            ValorantMC.sendActionBar(p, "&6Reloading &f" + weapon.getType().getDisplayName() + " " + bar);
         }, 4L, 4L);
 
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
@@ -152,9 +301,7 @@ public class WeaponManager {
                 updateHeldItem(p, weapon);
                 // Reload-complete sound + action bar
                 p.playSound(p.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_LOADING_END, 0.9f, 1.6f);
-                p.sendActionBar(net.kyori.adventure.text.Component.text(
-                        "§aReloaded! §f" + weapon.getCurrentAmmo() + "/"
-                        + weapon.getType().getMagazineSize()));
+                ValorantMC.sendActionBar(p, "&aReloaded! &f" + weapon.getCurrentAmmo() + "/" + weapon.getType().getMagazineSize());
             }
         }, reloadTicks);
 
@@ -177,8 +324,7 @@ public class WeaponManager {
 
     /** Re-write the held item so ammo display stays current */
     public void updateHeldItem(Player p, Weapon weapon) {
-        p.getInventory().setItem(p.getInventory().getHeldItemSlot(),
-                weapon.toItemStack(p.getUniqueId()));
+        // Disabled since TaCZ handles item state natively
     }
 
     /** Refill all ammo for a player (called on round start) */

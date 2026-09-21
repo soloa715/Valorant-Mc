@@ -5,6 +5,7 @@ import com.valorantmc.game.ValorantGame;
 import com.valorantmc.managers.StatsManager;
 import com.valorantmc.shop.AgentSelectGUI;
 import com.valorantmc.shop.ShopGUI;
+import com.valorantmc.weapons.WeaponType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -29,7 +30,7 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
 
         // Alias commands
         switch (cmd.getName().toLowerCase()) {
-            case "vshop"       -> { return handleShop(sender); }
+            case "vshop"       -> { return handleShop(sender, args); }
             case "vagent"      -> { return handleAgent(sender); }
             case "vstats"      -> { return handleStats(sender, args); }
             case "vreload"     -> { return handleReloadWeapon(sender); }
@@ -45,7 +46,18 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
             case "vstart"      -> { return handleStart(sender, args); }
             case "vjoin"       -> { return handleJoin(sender, args); }
             case "vleave"      -> { return handleLeave(sender); }
-            case "vquick"      -> { return handleJoin(sender, new String[]{"join", "default"}); }
+            case "vquick"      -> {
+                if (!(sender instanceof Player p)) return true;
+                plugin.getGameManager().quickPlay(p);
+                return true;
+            }
+            case "vknife"      -> {
+                if (sender instanceof Player p) {
+                    plugin.getWeaponManager().giveTaCZWeapon(p, WeaponType.KNIFE, 2);
+                    p.sendMessage(ValorantMC.colorize("&a[ValorantMC] Equipped 3D Melee Knife!"));
+                }
+                return true;
+            }
             case "vpack", "vresourcepack" -> { return handlePack(sender); }
         }
 
@@ -60,10 +72,14 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
         return switch (args[0].toLowerCase()) {
             case "help"    -> { sendHelp(sender); yield true; }
             case "join"    -> handleJoin(sender, args);
+            case "quick"   -> {
+                if (sender instanceof Player p) plugin.getGameManager().quickPlay(p);
+                yield true;
+            }
             case "leave"   -> handleLeave(sender);
             case "create"  -> handleCreate(sender, args);
             case "start"   -> handleStart(sender, args);
-            case "shop"    -> handleShop(sender);
+            case "shop"    -> handleShop(sender, args.length > 1 ? Arrays.copyOfRange(args, 1, args.length) : new String[0]);
             case "agent"   -> handleAgent(sender);
             case "stats"   -> handleStats(sender, args.length > 1 ? Arrays.copyOfRange(args, 1, args.length) : new String[0]);
             case "maps"    -> handleMaps(sender);
@@ -155,6 +171,60 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ValorantMC.colorize("&aLobby spawn set to your current location."));
                 yield true;
             }
+            case "giveweapon", "gun", "weapon" -> {
+                if (!sender.hasPermission("valorantmc.admin")) { sender.sendMessage(noPermMsg); yield true; }
+                if (args.length < 2) {
+                    sender.sendMessage(ValorantMC.colorize("&cUsage: /valorant gun <weaponName> [player]"));
+                    yield true;
+                }
+                String wName = args[1].toUpperCase();
+                Player target = (args.length >= 3) ? Bukkit.getPlayer(args[2]) : (sender instanceof Player ? (Player) sender : null);
+                if (target == null) {
+                    sender.sendMessage(ValorantMC.colorize("&cPlayer not found or must specify a player from console."));
+                    yield true;
+                }
+                com.valorantmc.weapons.WeaponType wt = null;
+                try {
+                    wt = com.valorantmc.weapons.WeaponType.valueOf(wName);
+                } catch (IllegalArgumentException e) {
+                    for (com.valorantmc.weapons.WeaponType t : com.valorantmc.weapons.WeaponType.values()) {
+                        if (t.name().equalsIgnoreCase(wName) || t.getDisplayName().equalsIgnoreCase(wName)) {
+                            wt = t;
+                            break;
+                        }
+                    }
+                }
+                if (wt == null) {
+                    sender.sendMessage(ValorantMC.colorize("&cUnknown weapon: " + args[1]));
+                    yield true;
+                }
+                int slot = (wt == com.valorantmc.weapons.WeaponType.KNIFE) ? 2 : (wt.getCategory() == com.valorantmc.weapons.WeaponCategory.SIDEARM ? 1 : 0);
+                plugin.getWeaponManager().giveTaCZWeapon(target, wt, slot);
+                sender.sendMessage(ValorantMC.colorize("&aGave &e" + wt.getDisplayName() + "&a to &e" + target.getName()));
+                yield true;
+            }
+            case "credits", "money" -> {
+                if (!sender.hasPermission("valorantmc.admin")) { sender.sendMessage(noPermMsg); yield true; }
+                if (args.length < 2) {
+                    sender.sendMessage(ValorantMC.colorize("&cUsage: /valorant credits <amount> [player]"));
+                    yield true;
+                }
+                int amount;
+                try {
+                    amount = Integer.parseInt(args[1]);
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(ValorantMC.colorize("&cInvalid amount: " + args[1]));
+                    yield true;
+                }
+                Player target = (args.length >= 3) ? Bukkit.getPlayer(args[2]) : (sender instanceof Player ? (Player) sender : null);
+                if (target == null) {
+                    sender.sendMessage(ValorantMC.colorize("&cPlayer not found."));
+                    yield true;
+                }
+                plugin.getEconomyManager().addCredits(target, amount);
+                sender.sendMessage(ValorantMC.colorize("&aAdded &e" + amount + "&a credits to &e" + target.getName() + " (Total: " + plugin.getEconomyManager().getCredits(target) + ")"));
+                yield true;
+            }
             default        -> { sender.sendMessage(plugin.msg("errors.unknown-command")); yield true; }
         };
     }
@@ -163,8 +233,16 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleJoin(CommandSender sender, String[] args) {
         if (!(sender instanceof Player p)) { sender.sendMessage(plugin.msg("errors.player-only")); return true; }
-        if (args.length < 2) { p.sendMessage(ValorantMC.colorize("&cUsage: /valorant join <game-id>")); return true; }
-        plugin.getGameManager().joinGame(p, args[1]);
+        if (args.length < 2) {
+            plugin.getGameManager().quickPlay(p);
+            return true;
+        }
+        String targetId = args[1];
+        ValorantGame game = plugin.getGameManager().getGame(targetId);
+        if (game == null) {
+            game = plugin.getGameManager().createGame(targetId);
+        }
+        plugin.getGameManager().joinGame(p, targetId);
         return true;
     }
 
@@ -186,31 +264,106 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleStart(CommandSender sender, String[] args) {
         if (!sender.hasPermission("valorantmc.admin")) { sender.sendMessage(plugin.msg("errors.no-permission")); return true; }
-        if (args.length < 3) { sender.sendMessage(ValorantMC.colorize("&cUsage: /valorant start <id> <map>")); return true; }
-        ValorantGame game = plugin.getGameManager().getGame(args[1]);
-        if (game == null) { sender.sendMessage(ValorantMC.colorize("&cGame not found!")); return true; }
-        if (!plugin.getMapManager().hasMap(args[2])) {
-            sender.sendMessage(ValorantMC.colorize("&cMap not found! Use /valorant maps to list maps."));
+        
+        ValorantGame game = null;
+        String mapName = null;
+
+        if (sender instanceof Player p) {
+            game = plugin.getGameManager().getGame(p);
+        }
+
+        if (args.length >= 3) {
+            game = plugin.getGameManager().getGame(args[1]);
+            mapName = args[2];
+        } else if (args.length == 2) {
+            if (game == null) {
+                game = plugin.getGameManager().getGame(args[1]);
+            }
+            if (game == null) {
+                mapName = args[1];
+                if (sender instanceof Player p) {
+                    game = plugin.getGameManager().createGame("game-" + p.getName());
+                    plugin.getGameManager().joinGame(p, game.getId());
+                }
+            } else {
+                mapName = plugin.getGameManager().nextRotationMap();
+            }
+        } else {
+            if (game == null && sender instanceof Player p) {
+                game = plugin.getGameManager().createGame("game-" + p.getName());
+                plugin.getGameManager().joinGame(p, game.getId());
+            }
+            mapName = plugin.getGameManager().nextRotationMap();
+        }
+
+        if (game == null) {
+            sender.sendMessage(ValorantMC.colorize("&cUsage: /valorant start <id> <map>"));
             return true;
         }
-        game.start(args[2]);
-        sender.sendMessage(ValorantMC.colorize("&aStarted game &e" + args[1] + "&a on map &e" + args[2]));
+
+        if (mapName == null || !plugin.getMapManager().hasMap(mapName)) {
+            mapName = plugin.getGameManager().nextRotationMap();
+        }
+
+        if (mapName == null) {
+            sender.sendMessage(ValorantMC.colorize("&cNo valid map found to start!"));
+            return true;
+        }
+
+        game.start(mapName);
+        sender.sendMessage(ValorantMC.colorize("&aStarted game &e" + game.getId() + "&a on map &e" + mapName));
         return true;
     }
 
-    private boolean handleShop(CommandSender sender) {
+    private boolean handleShop(CommandSender sender, String[] args) {
         if (!(sender instanceof Player p)) { sender.sendMessage(plugin.msg("errors.player-only")); return true; }
         ValorantGame game = plugin.getGameManager().getGame(p);
-        if (game == null) { p.sendMessage(plugin.msg("game.not-in-game")); return true; }
-        p.openInventory(ShopGUI.build(p));
+        if (game != null && game.getState() != com.valorantmc.game.GameState.BUY_PHASE) {
+            p.sendMessage(ValorantMC.colorize("&cThe shop is only available during the Buy Phase!"));
+            return true;
+        }
+
+        if (args != null && args.length > 0) {
+            if ("refund".equalsIgnoreCase(args[0])) {
+                plugin.getShopManager().refundLatest(p, game);
+                return true;
+            }
+            if ("buyfor".equalsIgnoreCase(args[0]) && args.length >= 3) {
+                Player target = Bukkit.getPlayer(args[1]);
+                if (target == null) {
+                    p.sendMessage(ValorantMC.colorize("&cPlayer not found: " + args[1]));
+                    return true;
+                }
+                try {
+                    WeaponType type = WeaponType.valueOf(args[2].toUpperCase());
+                    plugin.getShopManager().buyForTeammate(p, target, type, game);
+                } catch (IllegalArgumentException e) {
+                    p.sendMessage(ValorantMC.colorize("&cInvalid weapon: " + args[2]));
+                }
+                return true;
+            }
+        }
+
+        if (plugin.getFabricChannelListener() != null && plugin.getFabricChannelListener().hasMod(p)) {
+            plugin.getFabricChannelListener().sendBuyMenu(p, true);
+        } else {
+            p.openInventory(ShopGUI.build(p));
+        }
         return true;
     }
 
     private boolean handleAgent(CommandSender sender) {
         if (!(sender instanceof Player p)) { sender.sendMessage(plugin.msg("errors.player-only")); return true; }
         ValorantGame game = plugin.getGameManager().getGame(p);
-        if (game == null) { p.sendMessage(plugin.msg("game.not-in-game")); return true; }
-        p.openInventory(AgentSelectGUI.build(p));
+        if (game != null && game.getState() != com.valorantmc.game.GameState.AGENT_SELECT) {
+            p.sendMessage(ValorantMC.colorize("&cYou cannot change agents mid-game!"));
+            return true;
+        }
+        if (plugin.getFabricChannelListener() != null && plugin.getFabricChannelListener().hasMod(p)) {
+            plugin.getFabricChannelListener().sendAgentSelect(p);
+        } else {
+            p.openInventory(AgentSelectGUI.build(p));
+        }
         return true;
     }
 
@@ -315,7 +468,7 @@ public class ValorantCommand implements CommandExecutor, TabCompleter {
         boolean nowWalking = !p.isSneaking();
         // Toggle a slow-walk marker via metadata; WeaponListener already reduces spread when moving.
         p.setWalkSpeed(p.getWalkSpeed() < 0.18f ? 0.2f : 0.1f);
-        p.sendActionBar(ValorantMC.colorize(p.getWalkSpeed() < 0.18f ? "&7Walking…" : "&fRunning"));
+        ValorantMC.sendActionBar(p, p.getWalkSpeed() < 0.18f ? "&7Walking…" : "&fRunning");
         return true;
     }
 

@@ -52,7 +52,7 @@ public enum WeaponType {
     ODIN     ("Odin",      WeaponCategory.HEAVY,   3200, 62, 12.00, 100,  5.00, 1, false, false, Material.DIAMOND_PICKAXE, 6002, 0.070f, 0.016f),
 
     // ── Melee ────────────────────────────────────────────────────────────────
-    KNIFE    ("Knife",     WeaponCategory.MELEE,      0, 50,  2.00,  -1,  0.00, 1, false, false, Material.WOODEN_SWORD,    7001, 0.000f, 0.000f);
+    KNIFE    ("Knife",     WeaponCategory.MELEE,      0, 50,  2.00,  -1,  0.00, 1, false, false, Material.IRON_SWORD,      7001, 0.000f, 0.000f);
 
     // ── Fields ───────────────────────────────────────────────────────────────
     private final String        displayName;

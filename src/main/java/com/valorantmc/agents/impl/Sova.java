@@ -4,7 +4,6 @@ import com.valorantmc.ValorantMC;
 import com.valorantmc.agents.Agent;
 import com.valorantmc.agents.AgentRole;
 import com.valorantmc.game.ValorantGame;
-import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.potion.PotionEffect;
@@ -64,8 +63,8 @@ public class Sova extends Agent {
 
         player.setGameMode(GameMode.SPECTATOR);
         player.setSpectatorTarget(drone);
-        player.sendActionBar(Component.text(
-                "§b[Owl Drone] §7WASD to fly · Drone scans enemies every 1.5s · 8s duration"));
+        ValorantMC.sendActionBar(player,
+                "&b[Owl Drone] &7WASD to fly · Drone scans enemies every 1.5s · 8s duration");
 
         final int DURATION_TICKS  = 160; // 8 seconds
         final int SCAN_INTERVAL   = 30;  // every 1.5 seconds
@@ -98,8 +97,8 @@ public class Sova extends Agent {
 
                 // Action bar countdown
                 int secondsLeft = (DURATION_TICKS - tick) / 20;
-                player.sendActionBar(Component.text(
-                        "§b[Owl Drone] §7Scanning… §f" + secondsLeft + "s §8| §7Click to recall early"));
+                ValorantMC.sendActionBar(player,
+                        "&b[Owl Drone] &7Scanning… &f" + secondsLeft + "s &8| &7Click to recall early");
 
                 tick++;
             }
@@ -199,7 +198,7 @@ public class Sova extends Agent {
                     if (game.getTeam(target) != null && game.getTeam(player) != null &&
                             !game.getTeam(target).getSide().equals(game.getTeam(player).getSide())) {
                         game.applyDamage(player, target, 100, false, false);
-                        target.sendActionBar(ValorantMC.colorize("&b[Hunter's Fury] &fYou were hit!"));
+                        ValorantMC.sendActionBar(target, "&b[Hunter's Fury] &fYou were hit!");
                     }
                 }
             }

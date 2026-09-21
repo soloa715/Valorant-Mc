@@ -49,14 +49,14 @@ public class Gekko extends Agent {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 120) { cancel(); return; }
-                pitLoc.getWorld().spawnParticle(Particle.ITEM_SLIME, pitLoc.clone().add(0, 0.1, 0), 15, 2, 0.1, 2, 0.02);
+                pitLoc.getWorld().spawnParticle(Particle.SLIME, pitLoc.clone().add(0, 0.1, 0), 15, 2, 0.1, 2, 0.02);
                 for (Player p : pitLoc.getWorld().getPlayers()) {
                     if (p.equals(player)) continue;
                     if (game.getTeam(p) == null || game.getTeam(player) == null) continue;
                     if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                     if (p.getLocation().distance(pitLoc) <= 4) {
                         game.applyDamage(player, p, 15, false, false);
-                        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 2, false, false));
+                        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 20, 2, false, false));
                     }
                 }
                 ticks += 5;
@@ -117,7 +117,7 @@ public class Gekko extends Agent {
                     cancel();
                     return;
                 }
-                dizzyRef.getWorld().spawnParticle(Particle.DUST, dizzyRef.getLocation(), 5, 0.5, 0.5, 0.5, 0,
+                dizzyRef.getWorld().spawnParticle(Particle.REDSTONE, dizzyRef.getLocation(), 5, 0.5, 0.5, 0.5, 0,
                         new Particle.DustOptions(Color.fromRGB(50, 255, 100), 1.2f));
 
                 // Flash enemies in LOS every 30 ticks
@@ -129,7 +129,7 @@ public class Gekko extends Agent {
                         if (p.getLocation().distance(dizzyRef.getLocation()) <= 8) {
                             p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 50, 0, false, false));
                             dizzyRef.getWorld().spawnParticle(Particle.FLASH, dizzyRef.getLocation(), 1);
-                            p.sendActionBar(ValorantMC.colorize("&a[Dizzy] &fFlashed!"));
+                            ValorantMC.sendActionBar(p, "&a[Dizzy] &fFlashed!");
                         }
                     }
                 }
@@ -167,7 +167,7 @@ public class Gekko extends Agent {
                     cancel();
                     return;
                 }
-                wingman.getWorld().spawnParticle(Particle.DUST, wingman.getLocation().add(0, 0.5, 0), 2, 0.2, 0.2, 0.2, 0,
+                wingman.getWorld().spawnParticle(Particle.REDSTONE, wingman.getLocation().add(0, 0.5, 0), 2, 0.2, 0.2, 0.2, 0,
                         new Particle.DustOptions(Color.fromRGB(50, 255, 80), 1f));
 
                 // Determine target — defuse if spike planted, otherwise plant if carrying
@@ -246,7 +246,7 @@ public class Gekko extends Agent {
             @Override public void run() {
                 if (ticks >= 200 || thrashRef.isDead()) { thrashRef.remove(); cancel(); return; }
 
-                thrashRef.getWorld().spawnParticle(Particle.DUST, thrashRef.getLocation(), 3, 0.2, 0.2, 0.2, 0,
+                thrashRef.getWorld().spawnParticle(Particle.REDSTONE, thrashRef.getLocation(), 3, 0.2, 0.2, 0.2, 0,
                         new Particle.DustOptions(Color.fromRGB(255, 80, 50), 1.3f));
 
                 for (Player p : thrashRef.getWorld().getPlayers()) {
@@ -257,9 +257,9 @@ public class Gekko extends Agent {
                         thrashRef.remove();
                         final Player captured = p;
                         game.broadcast(ValorantMC.colorize("&a[Thrash] &fCaptured &e" + captured.getName() + "&f!"));
-                        captured.sendActionBar(ValorantMC.colorize("&c&lCAPTURED by Thrash!"));
-                        captured.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 80, 10, false, false));
-                        captured.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 80, 10, false, false));
+                        ValorantMC.sendActionBar(captured, "&c&lCAPTURED by Thrash!");
+                        captured.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 80, 10, false, false));
+                        captured.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 80, 10, false, false));
                         captured.getWorld().spawnParticle(Particle.FLASH, captured.getLocation(), 2);
                         // Cancel velocity each tick for 4s
                         new BukkitRunnable() {

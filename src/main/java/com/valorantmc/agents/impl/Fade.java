@@ -37,7 +37,7 @@ public class Fade extends Agent {
 
         Location target = safeTarget(player, 18);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 0.7f, 1.5f);
-        player.getWorld().spawnParticle(Particle.DUST, target, 15, 0.5, 0.5, 0.5, 0,
+        player.getWorld().spawnParticle(Particle.REDSTONE, target, 15, 0.5, 0.5, 0.5, 0,
                 new Particle.DustOptions(Color.fromRGB(100, 0, 150), 1.5f));
         player.sendMessage(ValorantMC.colorize("&5[Fade] &fSeize!"));
 
@@ -54,9 +54,9 @@ public class Fade extends Agent {
         if (victim == null) return;
 
         final Player finalVictim = victim;
-        finalVictim.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 4, false, false));
+        finalVictim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 4, false, false));
         finalVictim.addPotionEffect(new PotionEffect(PotionEffectType.WITHER,   60, 1, false, false));
-        finalVictim.sendActionBar(ValorantMC.colorize("&5[Seize] &fCaught!"));
+        ValorantMC.sendActionBar(finalVictim, "&5[Seize] &fCaught!");
 
         // Cancel velocity each tick for the root duration
         new BukkitRunnable() {
@@ -64,7 +64,7 @@ public class Fade extends Agent {
             @Override public void run() {
                 if (ticks >= 60 || finalVictim.isDead() || !finalVictim.isOnline()) { cancel(); return; }
                 finalVictim.setVelocity(new Vector(0, -0.1, 0));
-                finalVictim.getWorld().spawnParticle(Particle.DUST, finalVictim.getLocation().add(0, 1, 0), 3, 0.3, 0.5, 0.3, 0,
+                finalVictim.getWorld().spawnParticle(Particle.REDSTONE, finalVictim.getLocation().add(0, 1, 0), 3, 0.3, 0.5, 0.3, 0,
                         new Particle.DustOptions(Color.fromRGB(120, 0, 180), 1f));
                 ticks++;
             }
@@ -94,7 +94,7 @@ public class Fade extends Agent {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 160 || eye.isDead()) { eye.remove(); cancel(); return; }
-                eye.getWorld().spawnParticle(Particle.DUST, eye.getLocation().add(0, 0.5, 0), 3, 0.3, 0.3, 0.3, 0,
+                eye.getWorld().spawnParticle(Particle.REDSTONE, eye.getLocation().add(0, 0.5, 0), 3, 0.3, 0.3, 0.3, 0,
                         new Particle.DustOptions(Color.fromRGB(150, 0, 200), 1f));
 
                 if (ticks % 10 == 0) {
@@ -148,7 +148,7 @@ public class Fade extends Agent {
                 @Override public void run() {
                     if (ticks >= 200 || prowler.isDead()) { prowler.remove(); cancel(); return; }
 
-                    prowler.getWorld().spawnParticle(Particle.DUST, prowler.getLocation(), 2, 0.1, 0.1, 0.1, 0,
+                    prowler.getWorld().spawnParticle(Particle.REDSTONE, prowler.getLocation(), 2, 0.1, 0.1, 0.1, 0,
                             new Particle.DustOptions(Color.fromRGB(160, 50, 220), 1f));
 
                     // Home toward nearest enemy every 5 ticks
@@ -169,7 +169,7 @@ public class Fade extends Agent {
                             if (nearest < 1.5) {
                                 target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0, false, false));
                                 target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 60, 1, false, false));
-                                target.sendActionBar(ValorantMC.colorize("&5[Prowler] &fCaught!"));
+                                ValorantMC.sendActionBar(target, "&5[Prowler] &fCaught!");
                                 prowler.getWorld().spawnParticle(Particle.FLASH, prowler.getLocation(), 1);
                                 prowler.remove();
                                 cancel();
@@ -208,7 +208,7 @@ public class Fade extends Agent {
                     double rad = Math.toRadians(deg);
                     Location pos = origin.clone().add(radius * Math.cos(rad), 0, radius * Math.sin(rad));
                     for (int h = 0; h <= 2; h++) {
-                        pos.clone().add(0, h, 0).getWorld().spawnParticle(Particle.DUST,
+                        pos.clone().add(0, h, 0).getWorld().spawnParticle(Particle.REDSTONE,
                                 pos.clone().add(0, h, 0), 2, 0.2, 0, 0.2, 0,
                                 new Particle.DustOptions(Color.fromRGB(80, 0, 120), 1.5f));
                     }
@@ -222,7 +222,7 @@ public class Fade extends Agent {
                     if (Math.abs(dist - radius) <= 1.5) {
                         p.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 120, 3, false, false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.WITHER,   120, 1, false, false));
-                        p.sendActionBar(ValorantMC.colorize("&5[Nightfall] &fDecaying!"));
+                        ValorantMC.sendActionBar(p, "&5[Nightfall] &fDecaying!");
                     }
                 }
                 wave++;

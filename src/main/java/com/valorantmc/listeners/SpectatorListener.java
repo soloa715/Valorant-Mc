@@ -64,17 +64,17 @@ public class SpectatorListener implements Listener {
         List<Player> alive = aliveTeammates(spectator, game);
         spectator.setSpectatorTarget(alive.isEmpty() ? null : alive.get(0));
         if (!alive.isEmpty()) {
-            spectator.sendActionBar(net.kyori.adventure.text.Component.text(
-                    "§7Spectating §f" + alive.get(0).getName()
-                    + " §8| §7Click to cycle teammates"));
+            com.valorantmc.ValorantMC.sendActionBar(spectator,
+                    "&7Spectating &f" + alive.get(0).getName()
+                    + " &8| &7Click to cycle teammates");
         }
     }
 
     private void cycleTarget(Player spectator, ValorantGame game, boolean backward) {
         List<Player> alive = aliveTeammates(spectator, game);
         if (alive.isEmpty()) {
-            spectator.sendActionBar(net.kyori.adventure.text.Component.text(
-                    "§7No alive teammates to spectate."));
+            com.valorantmc.ValorantMC.sendActionBar(spectator,
+                    "&7No alive teammates to spectate.");
             return;
         }
 
@@ -89,10 +89,10 @@ public class SpectatorListener implements Listener {
             }
         }
         spectator.setSpectatorTarget(alive.get(idx));
-        spectator.sendActionBar(net.kyori.adventure.text.Component.text(
-                "§7Spectating §f" + alive.get(idx).getName()
-                + " §8[" + (idx + 1) + "/" + alive.size() + "]"
-                + " §8| §7Click to cycle"));
+        com.valorantmc.ValorantMC.sendActionBar(spectator,
+                "&7Spectating &f" + alive.get(idx).getName()
+                + " &8[" + (idx + 1) + "/" + alive.size() + "]"
+                + " &8| &7Click to cycle");
     }
 
     private List<Player> aliveTeammates(Player spectator, ValorantGame game) {

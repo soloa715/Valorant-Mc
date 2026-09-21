@@ -143,7 +143,7 @@ public class WeaponListener implements Listener {
         player.getWorld().playSound(player.getLocation(), sound, 1f, getPitch(type));
 
         // Shell casing particles
-        player.getWorld().spawnParticle(Particle.ITEM,
+        player.getWorld().spawnParticle(Particle.ITEM_CRACK,
                 player.getEyeLocation().add(player.getLocation().getDirection().rotateAroundY(1.5)),
                 1, 0, 0, 0, 0.1, new ItemStack(Material.GOLD_NUGGET));
     }
@@ -212,7 +212,7 @@ public class WeaponListener implements Listener {
         // Impact particles on block
         if (result.getHitBlock() != null) {
             Location impact = result.getHitPosition().toLocation(player.getWorld());
-            player.getWorld().spawnParticle(Particle.BLOCK_CRUMBLE, impact, 6, 0, 0, 0, 0.1,
+            player.getWorld().spawnParticle(Particle.BLOCK_CRACK, impact, 6, 0, 0, 0, 0.1,
                     result.getHitBlock().getBlockData());
         }
     }
@@ -254,35 +254,37 @@ public class WeaponListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityDamage(EntityDamageByEntityEvent e) {
-        if (!(e.getDamager() instanceof Player player)) return;
         if (!(e.getEntity() instanceof Player target)) return;
 
-        ValorantGame game = plugin.getGameManager().getGame(player);
+        ValorantGame game = plugin.getGameManager().getGame(target);
         if (game == null) return;
 
-        e.setCancelled(true); // we handle all damage ourselves
+        Player shooter = null;
+        if (e.getDamager() instanceof Player p) {
+            shooter = p;
+        } else if (e.getDamager() instanceof org.bukkit.entity.Projectile proj) {
+            if (proj.getShooter() instanceof Player p) {
+                shooter = p;
+            }
+        } else if (e.getDamager().getType().name().contains("TACZ")) {
+            // In case TaCZ uses a custom entity that doesn't implement Projectile
+            // Just let it do damage or try to extract shooter (not easy via Spigot API)
+            // But usually TaCZ bullets implement Projectile or we can just use the shooter if possible
+        }
 
-        WeaponType heldType = Weapon.getWeaponType(player.getInventory().getItemInMainHand());
-        if (heldType == null) return;
-
-        ValorantTeam st = game.getTeam(player);
-        ValorantTeam tt = game.getTeam(target);
-        if (st == null || tt == null || st.getSide() == tt.getSide()) return;
-
-        if (heldType.isMelee()) {
-            game.applyDamage(player, target, heldType.getDamage(), false, false);
+        if (shooter == null) {
+            // Environmental or non-player damage (maybe handled by GameListener)
             return;
         }
 
-        // Left-click-on-entity counts as a gun shot (PlayerInteractEvent doesn't fire on entities)
-        ItemStack held = player.getInventory().getItemInMainHand();
-        Weapon weapon = plugin.getWeaponManager().getHeldWeapon(player);
-        if (weapon == null || weapon.getType() != heldType) {
-            weapon = weaponFromItem(held, heldType);
-            plugin.getWeaponManager().setHeldWeapon(player, weapon);
-        }
-        if (!plugin.getWeaponManager().tryShoot(player, weapon)) return;
-        fireWeapon(player, weapon, game);
+        e.setCancelled(true); // we handle all damage ourselves
+
+        ValorantTeam st = game.getTeam(shooter);
+        ValorantTeam tt = game.getTeam(target);
+        if (st == null || tt == null || st.getSide() == tt.getSide()) return;
+
+        // Apply the raw damage from the event (TaCZ calculates headshot multipliers)
+        game.applyDamage(shooter, target, (int) e.getDamage(), false, false);
     }
 
     // ── Hotbar slot change: update held weapon tracking ─────────────────────
@@ -296,7 +298,7 @@ public class WeaponListener implements Listener {
         // Persist current weapon state to its hotbar item before swapping
         Weapon prev = plugin.getWeaponManager().getHeldWeapon(player);
         ItemStack prevItem = player.getInventory().getItem(e.getPreviousSlot());
-        if (prev != null && Weapon.getWeaponType(prevItem) == prev.getType()) {
+        if (prev != null && prevItem != null && !prevItem.getType().name().contains("GUN") && Weapon.getWeaponType(prevItem) == prev.getType()) {
             player.getInventory().setItem(e.getPreviousSlot(),
                     prev.toItemStack(player.getUniqueId()));
         }

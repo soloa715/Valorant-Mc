@@ -94,7 +94,7 @@ public class AbilityListener implements Listener {
                 Boolean bladestorm = player.getPersistentDataContainer()
                         .get(new NamespacedKey(plugin, "bladestorm"), PersistentDataType.BOOLEAN);
                 if (Boolean.TRUE.equals(bladestorm)) {
-                    fireBladeStormKnife(player, game);
+                    fireBladeStorm(player, game, false);
                     return;
                 }
             }
@@ -137,10 +137,37 @@ public class AbilityListener implements Listener {
             return;
         }
 
+        // ── Blade Storm item check ────────────────────────────────────────────
+        boolean isBladeStormItem = held.hasItemMeta() && Boolean.TRUE.equals(
+                held.getItemMeta().getPersistentDataContainer().get(
+                        new NamespacedKey(plugin, "bladestorm_item"), PersistentDataType.BOOLEAN));
+        if (isBladeStormItem || Boolean.TRUE.equals(player.getPersistentDataContainer().get(
+                new NamespacedKey(plugin, "bladestorm"), PersistentDataType.BOOLEAN))) {
+            Action act = e.getAction();
+            boolean isLeft = act == Action.LEFT_CLICK_AIR || act == Action.LEFT_CLICK_BLOCK;
+            boolean isRight = act == Action.RIGHT_CLICK_AIR || act == Action.RIGHT_CLICK_BLOCK;
+            if (isLeft || isRight) {
+                e.setCancelled(true);
+                fireBladeStorm(player, game, isRight);
+                return;
+            }
+        }
+
         // ── Spike: plant on right-click while sneaking ─────────────────────────
         if (plugin.getAbilityManager().isSpikeItem(held)) {
             e.setCancelled(true);
-            handleSpikePlant(player, game, e.getAction());
+            Action act = e.getAction();
+            if (act == Action.RIGHT_CLICK_AIR || act == Action.RIGHT_CLICK_BLOCK) {
+                if (!player.isSneaking()) {
+                    ValorantMC.sendActionBar(player, "&eHold SNEAK (Shift) + RIGHT-CLICK to plant the Spike!");
+                    return;
+                }
+                if (!isOnBombSite(player, game)) {
+                    ValorantMC.sendActionBar(player, "&cBring Spike to Site A or Site B to plant!");
+                    return;
+                }
+                handleSpikePlant(player, game, act);
+            }
             return;
         }
 
@@ -184,7 +211,7 @@ public class AbilityListener implements Listener {
                 }
                 progress[0]++;
                 float pct = (float) progress[0] / (plantTicks / 4);  // /4 because we tick every 4 ticks
-                player.sendActionBar(ValorantMC.colorize("&cPlanting Spike... &8[" + buildBar(pct) + "&8]"));
+                ValorantMC.sendActionBar(player, "&cPlanting Spike... &8[" + buildBar(pct) + "&8]");
 
                 if (progress[0] >= plantTicks / 4) {
                     spike.finishPlant(player);
@@ -226,7 +253,7 @@ public class AbilityListener implements Listener {
         final org.bukkit.Location plantLoc = spike.getPlantLocation();
         if (plantLoc == null ||
                 player.getLocation().distance(plantLoc) > 3) {
-            player.sendActionBar(ValorantMC.colorize("&cGet closer to defuse the Spike!"));
+            ValorantMC.sendActionBar(player, "&cGet closer to defuse the Spike!");
             return;
         }
 
@@ -248,7 +275,7 @@ public class AbilityListener implements Listener {
                 }
                 progress[0]++;
                 float pct = (float) progress[0] / (defuseTicks / 4);
-                player.sendActionBar(ValorantMC.colorize("&bDefusing Spike... &8[" + buildBar(pct) + "&8]"));
+                ValorantMC.sendActionBar(player, "&bDefusing Spike... &8[" + buildBar(pct) + "&8]");
 
                 if (progress[0] >= defuseTicks / 4) {
                     spike.finishDefuse(player);
@@ -276,7 +303,7 @@ public class AbilityListener implements Listener {
             pt.cancel();
             ValorantGame game = plugin.getGameManager().getGame(p);
             if (game != null) game.getSpike().cancelPlant(p);
-            p.sendActionBar(ValorantMC.colorize("&cPlanting interrupted!"));
+            ValorantMC.sendActionBar(p, "&cPlanting interrupted!");
         }
 
         BukkitRunnable dt = defuseTasks.remove(p.getUniqueId());
@@ -284,7 +311,7 @@ public class AbilityListener implements Listener {
             dt.cancel();
             ValorantGame game = plugin.getGameManager().getGame(p);
             if (game != null) game.getSpike().cancelDefuse(p);
-            p.sendActionBar(ValorantMC.colorize("&cDefusing interrupted!"));
+            ValorantMC.sendActionBar(p, "&cDefusing interrupted!");
         }
     }
 
@@ -367,7 +394,7 @@ public class AbilityListener implements Listener {
             if (game == null) return;
 
             Location center = arrow.getLocation();
-            center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 4, 0.5, 0.5, 0.5, 0.1);
+            center.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, center, 4, 0.5, 0.5, 0.5, 0.1);
             center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 0.6f, 1.4f);
 
             for (Player p : center.getWorld().getPlayers()) {
@@ -378,8 +405,8 @@ public class AbilityListener implements Listener {
                 if (dist <= 3.5) {
                     int dmg = (int) (80 * (1 - dist / 3.5));
                     game.applyDamage(shooter, p, Math.max(20, dmg), false, false);
-                    p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 2, false, false));
-                    p.sendActionBar(ValorantMC.colorize("&b[Shock Bolt] &fYou were hit!"));
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 2, false, false));
+                    ValorantMC.sendActionBar(p, "&b[Shock Bolt] &fYou were hit!");
                 }
             }
             return;
@@ -394,7 +421,7 @@ public class AbilityListener implements Listener {
             if (game == null) return;
 
             Location center = arrow.getLocation();
-            center.getWorld().spawnParticle(Particle.ENCHANTED_HIT, center, 15, 0.5, 0.5, 0.5, 0.05);
+            center.getWorld().spawnParticle(Particle.CRIT_MAGIC, center, 15, 0.5, 0.5, 0.5, 0.05);
             center.getWorld().playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 0.5f, 1.8f);
 
             // Reveal enemies in 20-block radius — repeated 3 times with pulses
@@ -446,7 +473,7 @@ public class AbilityListener implements Listener {
             if (game == null) return;
 
             Location center = shell.getLocation();
-            center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 3);
+            center.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, center, 3);
             center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.2f);
 
             // Primary explosion
@@ -466,7 +493,7 @@ public class AbilityListener implements Listener {
                 final Location sub = center.clone().add(
                         (Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 3);
                 plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                    sub.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, sub, 3);
+                    sub.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, sub, 3);
                     sub.getWorld().playSound(sub, Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 1.5f);
                     for (Player p : sub.getWorld().getPlayers()) {
                         if (p.equals(shooter)) continue;
@@ -480,17 +507,64 @@ public class AbilityListener implements Listener {
         }
     }
 
-    // ── Jett Blade Storm knife throw ──────────────────────────────────────────
+    // ── Jett Blade Storm dagger throw ──────────────────────────────────────────
 
-    private void fireBladeStormKnife(Player player, ValorantGame game) {
-        org.bukkit.util.Vector dir = player.getLocation().getDirection().normalize();
-        org.bukkit.Location start  = player.getEyeLocation();
+    private void fireBladeStorm(Player player, ValorantGame game, boolean isBurst) {
+        ItemStack held = player.getInventory().getItemInMainHand();
+        int count = 5;
+        if (held != null && held.hasItemMeta()) {
+            Integer c = held.getItemMeta().getPersistentDataContainer().get(
+                    new NamespacedKey(plugin, "bladestorm_knives"), PersistentDataType.INTEGER);
+            if (c != null) count = c;
+        }
 
-        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ARROW_SHOOT, 0.7f, 1.8f);
+        if (count <= 0) {
+            endBladeStorm(player);
+            return;
+        }
 
-        // Step-by-step raycast up to 40 blocks
+        if (isBurst) {
+            // Shotgun burst of all remaining daggers
+            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1.6f);
+            for (int k = 0; k < count; k++) {
+                org.bukkit.util.Vector dir = player.getLocation().getDirection().normalize();
+                if (k > 0) {
+                    dir.add(new org.bukkit.util.Vector(
+                            (Math.random() - 0.5) * 0.15,
+                            (Math.random() - 0.5) * 0.15,
+                            (Math.random() - 0.5) * 0.15)).normalize();
+                }
+                raycastDagger(player, game, dir);
+            }
+            endBladeStorm(player);
+        } else {
+            // Single dagger throw
+            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ARROW_SHOOT, 0.8f, 2.0f);
+            org.bukkit.util.Vector dir = player.getLocation().getDirection().normalize();
+            boolean killed = raycastDagger(player, game, dir);
+
+            if (killed) {
+                // Refresh daggers to 5 on kill!
+                Jett.refreshBladeStorm(player, 5);
+                player.sendMessage(ValorantMC.colorize("&6&l[Blade Storm] &aKill! Daggers refreshed to 5/5!"));
+            } else {
+                int remaining = count - 1;
+                if (remaining <= 0) {
+                    endBladeStorm(player);
+                } else {
+                    Jett.refreshBladeStorm(player, remaining);
+                }
+            }
+        }
+    }
+
+    private boolean raycastDagger(Player player, ValorantGame game, org.bukkit.util.Vector dir) {
+        org.bukkit.Location start = player.getEyeLocation();
+        boolean hitAndKilled = false;
+
         for (int i = 1; i <= 40; i++) {
             org.bukkit.Location pos = start.clone().add(dir.clone().multiply(i));
+            pos.getWorld().spawnParticle(Particle.CLOUD, pos, 1, 0.02, 0.02, 0.02, 0.01);
             pos.getWorld().spawnParticle(Particle.CRIT, pos, 1, 0, 0, 0, 0);
 
             if (pos.getBlock().getType().isSolid()) break;
@@ -499,18 +573,33 @@ public class AbilityListener implements Listener {
                 if (target.equals(player)) continue;
                 if (game.getTeam(target) == null) continue;
                 if (game.getTeam(target).getSide().equals(game.getTeam(player).getSide())) continue;
+
                 if (target.getLocation().add(0, 1, 0).distance(pos) <= 0.8
                         || target.getEyeLocation().distance(pos) <= 0.8) {
-                    // Headshot if near eye level
                     boolean headshot = target.getEyeLocation().distance(pos) <= 0.8;
                     int dmg = headshot ? 150 : 50;
+
+                    int targetHealthBefore = game.getHealth(target);
                     game.applyDamage(player, target, dmg, headshot, false);
+
                     player.getWorld().spawnParticle(Particle.CRIT, pos, 10, 0.2, 0.2, 0.2, 0.1);
                     player.getWorld().playSound(pos, Sound.ENTITY_PLAYER_HURT, 1f, 1.2f);
-                    return; // one knife hits one target
+
+                    if (game.getHealth(target) <= 0 && targetHealthBefore > 0) {
+                        hitAndKilled = true;
+                    }
+                    return hitAndKilled;
                 }
             }
         }
+        return false;
+    }
+
+    private void endBladeStorm(Player player) {
+        player.getPersistentDataContainer().remove(new NamespacedKey(plugin, "bladestorm"));
+        player.getInventory().setItemInMainHand(null);
+        player.sendMessage(ValorantMC.colorize("&6Blade Storm ended."));
+        player.getWorld().playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_GENERIC, 0.8f, 0.8f);
     }
 
     private String formatLoc(org.bukkit.Location l) {

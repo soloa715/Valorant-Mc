@@ -68,7 +68,7 @@ public class Chamber extends Agent {
             boolean triggered = false;
             @Override public void run() {
                 if (triggered || marker.isDead()) { marker.remove(); cancel(); return; }
-                marker.getWorld().spawnParticle(Particle.DUST, marker.getLocation().add(0, 0.5, 0), 2, 0.2, 0.2, 0.2, 0,
+                marker.getWorld().spawnParticle(Particle.REDSTONE, marker.getLocation().add(0, 0.5, 0), 2, 0.2, 0.2, 0.2, 0,
                         new Particle.DustOptions(Color.fromRGB(255, 165, 0), 1f));
 
                 for (Player p : marker.getWorld().getPlayers()) {
@@ -99,9 +99,9 @@ public class Chamber extends Agent {
                     if (game.getTeam(p) == null || game.getTeam(source) == null) continue;
                     if (game.getTeam(p).getSide().equals(game.getTeam(source).getSide())) continue;
                     if (p.getLocation().distance(loc) <= 2.5) {
-                        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 3, false, false));
+                        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 3, false, false));
                         game.applyDamage(source, p, 10, false, false);
-                        p.sendActionBar(ValorantMC.colorize("&6[Trademark] &fTethered!"));
+                        ValorantMC.sendActionBar(p, "&6[Trademark] &fTethered!");
                     }
                 }
                 ticks += 5;
@@ -213,13 +213,13 @@ public class Chamber extends Agent {
                         int t = 0;
                         @Override public void run() {
                             if (t >= 120) { cancel(); return; }
-                            killLoc.getWorld().spawnParticle(Particle.DUST, killLoc.clone().add(0, 0.5, 0), 8, 2, 0.5, 2, 0,
+                            killLoc.getWorld().spawnParticle(Particle.REDSTONE, killLoc.clone().add(0, 0.5, 0), 8, 2, 0.5, 2, 0,
                                     new Particle.DustOptions(Color.fromRGB(255, 165, 0), 1.2f));
                             for (Player nearby : killLoc.getWorld().getPlayers()) {
                                 if (game.getTeam(nearby) == null || game.getTeam(player) == null) continue;
                                 if (game.getTeam(nearby).getSide().equals(game.getTeam(player).getSide())) continue;
                                 if (nearby.getLocation().distance(killLoc) <= 4) {
-                                    nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 3, false, false));
+                                    nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 3, false, false));
                                 }
                             }
                             t += 5;

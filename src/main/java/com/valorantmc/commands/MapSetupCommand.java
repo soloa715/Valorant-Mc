@@ -461,10 +461,10 @@ public class MapSetupCommand implements CommandExecutor {
 
             // 4 Vertical corner pillars
             for (double y = minY; y <= maxY; y += 0.4) {
-                p.spawnParticle(Particle.DUST, minX, y, minZ, 1, 0, 0, 0, 0, dust);
-                p.spawnParticle(Particle.DUST, maxX, y, minZ, 1, 0, 0, 0, 0, dust);
-                p.spawnParticle(Particle.DUST, maxX, y, maxZ, 1, 0, 0, 0, 0, dust);
-                p.spawnParticle(Particle.DUST, minX, y, maxZ, 1, 0, 0, 0, 0, dust);
+                p.spawnParticle(Particle.REDSTONE, minX, y, minZ, 1, 0, 0, 0, 0, dust);
+                p.spawnParticle(Particle.REDSTONE, maxX, y, minZ, 1, 0, 0, 0, 0, dust);
+                p.spawnParticle(Particle.REDSTONE, maxX, y, maxZ, 1, 0, 0, 0, 0, dust);
+                p.spawnParticle(Particle.REDSTONE, minX, y, maxZ, 1, 0, 0, 0, 0, dust);
             }
 
             // Draw 3 perimeter horizontal rectangles (floor, mid, ceiling)
@@ -489,7 +489,7 @@ public class MapSetupCommand implements CommandExecutor {
 
                 // Center vertical beam
                 for (double y = cy; y <= cy + 4.0; y += 0.5) {
-                    p.spawnParticle(Particle.DUST, cx, y, cz, 1, 0, 0, 0, 0, dust);
+                    p.spawnParticle(Particle.REDSTONE, cx, y, cz, 1, 0, 0, 0, 0, dust);
                 }
 
                 double minX = cx - radius;
@@ -498,10 +498,10 @@ public class MapSetupCommand implements CommandExecutor {
                 double maxZ = cz + radius;
 
                 for (double y = cy; y <= cy + 2.5; y += 0.4) {
-                    p.spawnParticle(Particle.DUST, minX, y, minZ, 1, 0, 0, 0, 0, dust);
-                    p.spawnParticle(Particle.DUST, maxX, y, minZ, 1, 0, 0, 0, 0, dust);
-                    p.spawnParticle(Particle.DUST, maxX, y, maxZ, 1, 0, 0, 0, 0, dust);
-                    p.spawnParticle(Particle.DUST, minX, y, maxZ, 1, 0, 0, 0, 0, dust);
+                    p.spawnParticle(Particle.REDSTONE, minX, y, minZ, 1, 0, 0, 0, 0, dust);
+                    p.spawnParticle(Particle.REDSTONE, maxX, y, minZ, 1, 0, 0, 0, 0, dust);
+                    p.spawnParticle(Particle.REDSTONE, maxX, y, maxZ, 1, 0, 0, 0, 0, dust);
+                    p.spawnParticle(Particle.REDSTONE, minX, y, maxZ, 1, 0, 0, 0, 0, dust);
                 }
 
                 double[] heights = {cy + 0.1, cy + 1.0};
@@ -522,7 +522,7 @@ public class MapSetupCommand implements CommandExecutor {
             double t = (double) i / steps;
             double px = x1 + (x2 - x1) * t;
             double pz = z1 + (z2 - z1) * t;
-            p.spawnParticle(Particle.DUST, px, y1, pz, 1, 0, 0, 0, 0, dust);
+            p.spawnParticle(Particle.REDSTONE, px, y1, pz, 1, 0, 0, 0, 0, dust);
         }
     }
 
@@ -537,7 +537,7 @@ public class MapSetupCommand implements CommandExecutor {
                 double sz = Double.parseDouble(parts[2].trim()) + 0.5;
 
                 for (double y = sy; y <= sy + 2.5; y += 0.4) {
-                    p.spawnParticle(Particle.DUST, sx, y, sz, 1, 0, 0, 0, 0, dust);
+                    p.spawnParticle(Particle.REDSTONE, sx, y, sz, 1, 0, 0, 0, 0, dust);
                 }
             } catch (Exception ignored) {}
         }

@@ -40,7 +40,7 @@ public class Breach extends Agent {
         abilityC.consume(); abilityC.setCooldown(4000);
 
         Location target = safeTarget(player, 10);
-        player.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, target.clone().add(0.5,0.5,0.5), 5, 1, 1, 1, 0.1);
+        player.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, target.clone().add(0.5,0.5,0.5), 5, 1, 1, 1, 0.1);
         player.getWorld().playSound(target, Sound.ENTITY_GENERIC_EXPLODE, 0.7f, 1.2f);
 
         for (Player p : target.getWorld().getPlayers()) {
@@ -49,7 +49,7 @@ public class Breach extends Agent {
             if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue; // skip teammates
             if (p.getLocation().distance(target) <= 4) {
                 game.applyDamage(player, p, 60, false, false);
-                p.sendActionBar(ValorantMC.colorize("&6[Aftershock] &fConcussed!"));
+                ValorantMC.sendActionBar(p, "&6[Aftershock] &fConcussed!");
             }
         }
         player.sendMessage(ValorantMC.colorize("&6[Breach] &fAftershock!"));
@@ -68,8 +68,8 @@ public class Breach extends Agent {
             if (p.equals(player)) continue;
             if (p.getLocation().distance(target) <= 7) {
                 p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 50, 0, false, false));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 30, 0, false, false));
-                p.sendActionBar(ValorantMC.colorize("&6[Flashpoint] &fFlashed!"));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 30, 0, false, false));
+                ValorantMC.sendActionBar(p, "&6[Flashpoint] &fFlashed!");
             }
         }
         player.sendMessage(ValorantMC.colorize("&6[Breach] &fFlashpoint!"));
@@ -91,7 +91,7 @@ public class Breach extends Agent {
             @Override public void run() {
                 if (ticks > 30) { cancel(); return; }
                 pos[0] = pos[0].clone().add(dir);
-                pos[0].getWorld().spawnParticle(Particle.BLOCK_CRUMBLE, pos[0], 20, 1, 0.1, 1, 0.1,
+                pos[0].getWorld().spawnParticle(Particle.BLOCK_CRACK, pos[0], 20, 1, 0.1, 1, 0.1,
                         Material.DIRT.createBlockData());
                 pos[0].getWorld().playSound(pos[0], Sound.BLOCK_GRAVEL_STEP, 0.5f, 0.8f);
 
@@ -99,9 +99,9 @@ public class Breach extends Agent {
                     if (p.equals(player)) continue;
                     if (p.getLocation().distance(pos[0]) <= 2.5) {
                         if (game.getTeam(p) != null && !game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) {
-                            p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 3, false, false));
-                            p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false));
-                            p.sendActionBar(ValorantMC.colorize("&6[Fault Line] &fConcussed!"));
+                            p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 3, false, false));
+                            p.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 40, 0, false, false));
+                            ValorantMC.sendActionBar(p, "&6[Fault Line] &fConcussed!");
                         }
                     }
                 }
@@ -132,7 +132,7 @@ public class Breach extends Agent {
                 // Expanding shockwave
                 for (double angle = 0; angle < 2 * Math.PI; angle += 0.3) {
                     Location edge = pos[0].clone().add(Math.cos(angle) * (ticks * 0.1), 0, Math.sin(angle) * (ticks * 0.1));
-                    edge.getWorld().spawnParticle(Particle.BLOCK_CRUMBLE, edge, 5, 0.2, 0.2, 0.2, 0.05,
+                    edge.getWorld().spawnParticle(Particle.BLOCK_CRACK, edge, 5, 0.2, 0.2, 0.2, 0.05,
                             Material.STONE.createBlockData());
                 }
 
@@ -142,7 +142,7 @@ public class Breach extends Agent {
                         if (game.getTeam(p) != null && !game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) {
                             p.setVelocity(new org.bukkit.util.Vector(0, 1.5, 0));
                             game.applyDamage(player, p, 80, false, false);
-                            p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 80, 3, false, false));
+                            p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 80, 3, false, false));
                             p.sendMessage(ValorantMC.colorize("&c[Rolling Thunder] &fKnocked up!"));
                         }
                     }

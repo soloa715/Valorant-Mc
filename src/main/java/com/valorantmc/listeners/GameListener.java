@@ -210,8 +210,7 @@ public class GameListener implements Listener {
         // Flight prevention
         if (p.isFlying() && p.getGameMode() != GameMode.SPECTATOR) {
             p.setFlying(false);
-            p.sendActionBar(net.kyori.adventure.text.Component.text(
-                    "§c[Anti-cheat] Flight is disabled in ValorantMC."));
+            ValorantMC.sendActionBar(p, "&c[Anti-cheat] Flight is disabled in ValorantMC.");
         }
 
         // Spawn barrier — only active during BUY_PHASE
@@ -229,8 +228,7 @@ public class GameListener implements Listener {
                         * com.valorantmc.game.ValorantGame.BARRIER_RADIUS;
         if (distSq > radiusSq) {
             e.setCancelled(true);
-            p.sendActionBar(net.kyori.adventure.text.Component.text(
-                    "§c§l◼ SPAWN BARRIER  §r§7— Round starts soon!"));
+            ValorantMC.sendActionBar(p, "&c&l◼ SPAWN BARRIER  &r&7— Round starts soon!");
         }
     }
 }

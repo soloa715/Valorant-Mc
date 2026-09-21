@@ -70,8 +70,8 @@ public class Neon extends Agent {
             if (game.getTeam(p).getSide().equals(game.getTeam(source).getSide())) continue;
             if (p.getLocation().distance(loc) <= 4) {
                 p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 0, false, false));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,  40, 3, false, false));
-                p.sendActionBar(ValorantMC.colorize("&e[Relay Bolt] &fStunned!"));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW,  40, 3, false, false));
+                ValorantMC.sendActionBar(p, "&e[Relay Bolt] &fStunned!");
             }
         }
     }
@@ -98,7 +98,7 @@ public class Neon extends Agent {
                 for (int side = -4; side <= 4; side++) {
                     for (int h = 0; h <= 3; h++) {
                         Location pos = wallBase.clone().add(right.clone().multiply(side)).add(0, h, 0);
-                        pos.getWorld().spawnParticle(Particle.DUST, pos, 1, 0, 0, 0, 0,
+                        pos.getWorld().spawnParticle(Particle.REDSTONE, pos, 1, 0, 0, 0, 0,
                                 new Particle.DustOptions(Color.fromRGB(0, 180, 255), 1.2f));
                     }
                 }
@@ -126,7 +126,7 @@ public class Neon extends Agent {
             player.removePotionEffect(PotionEffectType.SPEED);
             Vector slideDir = player.getLocation().getDirection().setY(0).normalize().multiply(2.2);
             player.setVelocity(slideDir.setY(0.15));
-            player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 15, 1, false, false));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 15, 1, false, false));
             player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_SPLASH, 1f, 1.5f);
             player.sendMessage(ValorantMC.colorize("&e[Neon] &fSlide!"));
         }
@@ -139,7 +139,7 @@ public class Neon extends Agent {
         abilityX.activateUlt();
 
         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 300, 3, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 300, 2, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, 300, 2, false, false));
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 1f, 1.6f);
         game.broadcast(ValorantMC.colorize("&e[Neon] &f" + player.getName() + " activated &lOverdrive&f!"));
         player.sendMessage(ValorantMC.colorize("&e&lOVERDRIVE ACTIVE! &fRight-click to fire the lightning beam!"));
@@ -152,7 +152,7 @@ public class Neon extends Agent {
         ValorantMC.getInstance().getServer().getScheduler().runTaskLater(ValorantMC.getInstance(), () -> {
             player.getPersistentDataContainer().remove(new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "overdrive"));
             player.removePotionEffect(PotionEffectType.SPEED);
-            player.removePotionEffect(PotionEffectType.HASTE);
+            player.removePotionEffect(PotionEffectType.FAST_DIGGING);
             player.sendMessage(ValorantMC.colorize("&eOverdrive faded."));
         }, 300L);
     }
@@ -165,7 +165,7 @@ public class Neon extends Agent {
         player.getWorld().playSound(eye, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.4f, 1.9f);
         for (int i = 0; i < 14; i++) {
             Location pos = eye.clone().add(dir.clone().multiply(i));
-            pos.getWorld().spawnParticle(Particle.DUST, pos, 3, 0.1, 0.1, 0.1, 0,
+            pos.getWorld().spawnParticle(Particle.REDSTONE, pos, 3, 0.1, 0.1, 0.1, 0,
                     new Particle.DustOptions(Color.fromRGB(100, 200, 255), 1.5f));
             // Check entity hit at this block
             for (Player p : pos.getWorld().getPlayers()) {

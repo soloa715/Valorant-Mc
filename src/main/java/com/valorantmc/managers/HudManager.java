@@ -39,17 +39,17 @@ public class HudManager {
                 tick++;
                 for (Player player : plugin.getServer().getOnlinePlayers()) {
                     ValorantGame game = plugin.getGameManager().getGame(player);
-                    if (game == null) continue;
-
-                    updateAmmoBar(player);
-                    updateActionBar(player, game);
-                    // Send structured HUD packet to Fabric mod clients
+                    if (game != null) {
+                        updateAmmoBar(player);
+                        updateActionBar(player, game);
+                    }
+                    // Send structured HUD packet to companion mod clients (even in lobby/standby)
                     com.valorantmc.network.FabricChannelListener fab =
                             plugin.getFabricChannelListener();
-                    if (fab != null && fab.hasMod(player)) {
+                    if (fab != null) {
                         fab.sendHud(player, game);
-                        // Radar every ~10 ticks (40 ticks / 4-tick period = 10 periods)
-                        if (tick % 10 == 0) fab.sendRadar(player, game);
+                        // Radar every ~10 ticks when in game
+                        if (game != null && tick % 10 == 0) fab.sendRadar(player, game);
                     }
                 }
             }
@@ -116,7 +116,7 @@ public class HudManager {
             sb.append("  &7RELOADING&f...");
         }
 
-        player.sendActionBar(ValorantMC.colorize(sb.toString()));
+        ValorantMC.sendActionBar(player, sb.toString());
     }
 
     /** Renders a single ability slot, e.g.  [C ●●]  or  [C ○] */
@@ -130,7 +130,7 @@ public class HudManager {
             int current = a.getCurrentCharges();
             if (total <= 0) {
                 // 0-charge ability (charges granted externally, e.g. Reyna soul orbs)
-                sb.append(current > 0 ? "●" : "&8—");
+                sb.append(current > 0 ? "●" : "&8-");
             } else {
                 for (int i = 0; i < total; i++) {
                     sb.append(i < current ? "●" : "&8○").append(color);

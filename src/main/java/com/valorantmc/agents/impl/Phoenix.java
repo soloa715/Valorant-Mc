@@ -77,7 +77,7 @@ public class Phoenix extends Agent {
             if (nearby.equals(player)) continue;
             if (nearby.getLocation().distance(loc) <= 10) {
                 nearby.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 0, false, false));
-                nearby.sendActionBar(ValorantMC.colorize("&6[Flash] &fPhoenix's Curveball!"));
+                ValorantMC.sendActionBar(nearby, "&6[Flash] &fPhoenix's Curveball!");
             }
         }
         player.sendMessage(ValorantMC.colorize("&6[Phoenix] &fCurveball!"));

@@ -71,7 +71,7 @@ public class Omen extends Agent {
                         if (p.equals(player)) continue;
                         if (p.getLocation().distance(current[0]) <= 2.5) {
                             p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0, false, false));
-                            p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false));
+                            p.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 40, 0, false, false));
                         }
                     }
 
@@ -96,7 +96,7 @@ public class Omen extends Agent {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 120) { cancel(); return; }
-                smokeCenter.getWorld().spawnParticle(Particle.LARGE_SMOKE, smokeCenter, 20, 1.5, 1.5, 1.5, 0.01);
+                smokeCenter.getWorld().spawnParticle(Particle.SMOKE_LARGE, smokeCenter, 20, 1.5, 1.5, 1.5, 0.01);
                 ticks += 5;
             }
         }.runTaskTimer(ValorantMC.getInstance(), 0L, 5L);
@@ -121,7 +121,7 @@ public class Omen extends Agent {
         game.broadcast(ValorantMC.colorize("&5An Omen is teleporting somewhere!"));
 
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 60, 0, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 60, 255, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 60, 255, false, false));
 
         ValorantMC.getInstance().getServer().getScheduler().runTaskLater(ValorantMC.getInstance(), () -> {
             if (player.isOnline()) {

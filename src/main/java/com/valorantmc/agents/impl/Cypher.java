@@ -59,7 +59,7 @@ public class Cypher extends Agent {
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.BLINDNESS, 30, 0, false, false));
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.SLOWNESS, 20, 1, false, false));
+                                org.bukkit.potion.PotionEffectType.SLOW, 20, 1, false, false));
                     }
                 }
                 ticks += 4;
@@ -112,7 +112,7 @@ public class Cypher extends Agent {
                         trapwires.remove(loc);
                         // Tether: slow + reveal
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.SLOWNESS, 100, 4, false, false));
+                                org.bukkit.potion.PotionEffectType.SLOW, 100, 4, false, false));
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.GLOWING, 100, 0, false, false));
                         p.sendMessage(ValorantMC.colorize("&c[Trapwire] &fYou triggered Cypher's trapwire!"));

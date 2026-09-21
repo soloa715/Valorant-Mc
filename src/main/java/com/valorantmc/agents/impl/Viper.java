@@ -50,13 +50,13 @@ public class Viper extends Agent {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 80) { cancel(); return; }
-                player.getWorld().spawnParticle(Particle.DRIPPING_LAVA, target, 10, 1, 0.2, 1, 0.02);
+                player.getWorld().spawnParticle(Particle.DRIP_LAVA, target, 10, 1, 0.2, 1, 0.02);
                 for (Player p : target.getWorld().getPlayers()) {
                     if (p.getLocation().distance(target) > 2.5) continue;
                     if (game.getTeam(p) == null) continue;
                     if (!game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) {
                         game.applyDamage(player, p, 8, false, false);
-                        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 1, false, false));
+                        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 20, 1, false, false));
                     }
                 }
                 ticks += 5;
@@ -93,7 +93,7 @@ public class Viper extends Agent {
                     cancel();
                     return;
                 }
-                loc.getWorld().spawnParticle(Particle.DRIPPING_WATER, loc, 20, 1.5, 1.5, 1.5, 0.01);
+                loc.getWorld().spawnParticle(Particle.DRIP_WATER, loc, 20, 1.5, 1.5, 1.5, 0.01);
                 for (Player p : loc.getWorld().getPlayers()) {
                     if (p.getLocation().distance(loc) > 2.5) continue;
                     if (game.getTeam(p) == null) continue;
@@ -141,7 +141,7 @@ public class Viper extends Agent {
                 for (int i = -6; i <= 6; i++) {
                     for (int y = 0; y < 4; y++) {
                         Location pos = start.clone().add(right.clone().multiply(i)).add(0, y, 0);
-                        pos.getWorld().spawnParticle(Particle.DRIPPING_WATER, pos, 2, 0.1, 0, 0.1, 0);
+                        pos.getWorld().spawnParticle(Particle.DRIP_WATER, pos, 2, 0.1, 0, 0.1, 0);
                     }
                 }
                 // Damage enemies in wall
@@ -194,7 +194,7 @@ public class Viper extends Agent {
 
         // Viper gets enhanced in the pit
         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 300, 1, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 300, 0, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 300, 0, false, false));
 
         new BukkitRunnable() {
             int ticks = 0;
@@ -203,7 +203,7 @@ public class Viper extends Agent {
                 // Pit visual
                 for (double angle = 0; angle < 2 * Math.PI; angle += 0.3) {
                     Location edge = center.clone().add(Math.cos(angle) * 8, 0, Math.sin(angle) * 8);
-                    edge.getWorld().spawnParticle(Particle.DRIPPING_WATER, edge, 2, 0, 1, 0, 0.02);
+                    edge.getWorld().spawnParticle(Particle.DRIP_WATER, edge, 2, 0, 1, 0, 0.02);
                 }
                 // Damage enemies in pit
                 for (Player p : center.getWorld().getPlayers()) {
@@ -212,7 +212,7 @@ public class Viper extends Agent {
                     if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                     if (p.getLocation().distance(center) <= 8) {
                         game.applyDamage(player, p, 8, false, false);
-                        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 1, false, false));
+                        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 20, 1, false, false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 20, 0, false, false));
                     }
                 }

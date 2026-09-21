@@ -10,6 +10,21 @@ public class AgentManager {
 
     private final ValorantMC plugin;
     private final Map<String, Agent> agentRegistry = new LinkedHashMap<>();
+    private final Map<UUID, Agent> playerAgents = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public void setPlayerAgent(org.bukkit.entity.Player player, Agent agent) {
+        if (player == null) return;
+        if (agent != null) {
+            playerAgents.put(player.getUniqueId(), agent);
+        } else {
+            playerAgents.remove(player.getUniqueId());
+        }
+    }
+
+    public Agent getAgent(org.bukkit.entity.Player player) {
+        if (player == null) return null;
+        return playerAgents.get(player.getUniqueId());
+    }
 
     public AgentManager(ValorantMC plugin) {
         this.plugin = plugin;

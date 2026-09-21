@@ -72,7 +72,7 @@ public final class ValorantMC extends JavaPlugin {
         com.valorantmc.commands.ValorantTabCompleter vTab = new com.valorantmc.commands.ValorantTabCompleter(this);
         com.valorantmc.commands.MapSetupTabCompleter mapTab = new com.valorantmc.commands.MapSetupTabCompleter(this);
 
-        String[] playerCmds = {"valorant", "vshop", "vagent", "vstats", "vreload", "vdropspike", "vwalk", "vuse", "vskin", "vplay", "vcustom", "vscoreboard", "vspec", "vstart", "vjoin", "vleave", "vquick", "vpack"};
+        String[] playerCmds = {"valorant", "vshop", "vagent", "vskip", "vstats", "vreload", "vdropspike", "vwalk", "vuse", "vskin", "vplay", "vcustom", "vscoreboard", "vspec", "vstart", "vjoin", "vleave", "vquick", "vpack"};
         for (String c : playerCmds) {
             if (getCommand(c) != null) {
                 getCommand(c).setExecutor(cmd);
@@ -98,7 +98,7 @@ public final class ValorantMC extends JavaPlugin {
                     p.openInventory(com.valorantmc.gui.AdminGUI.buildMain(p, g));
                     return true;
                 });
-            getCommand("vadmin").setTabCompleter((sender, command, alias, args) -> args.length == 1 ? java.util.List.of("web") : java.util.Collections.emptyList());
+            getCommand("vadmin").setTabCompleter(vTab);
         }
 
         // Register listeners
@@ -167,5 +167,20 @@ public final class ValorantMC extends JavaPlugin {
 
     public static String colorize(String s) {
         return s.replace("&", "\u00a7");
+    }
+
+    public static void sendTitle(org.bukkit.entity.Player player, String title, String subtitle, int fadeIn, int stay, int fadeOut) {
+        if (player == null) return;
+        player.sendTitle(colorize(title), colorize(subtitle), fadeIn, stay, fadeOut);
+    }
+
+    public static void sendActionBar(org.bukkit.entity.Player player, String message) {
+        if (player == null) return;
+        try {
+            player.spigot().sendMessage(net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
+                    net.md_5.bungee.api.chat.TextComponent.fromLegacyText(colorize(message)));
+        } catch (Throwable t) {
+            player.sendMessage(colorize(message));
+        }
     }
 }

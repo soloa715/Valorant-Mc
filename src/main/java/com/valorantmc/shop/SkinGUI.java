@@ -28,13 +28,13 @@ public class SkinGUI {
     public static Inventory build(Player p, WeaponType filter) {
         Inventory inv = Bukkit.createInventory(null, 54, TITLE);
 
-        // Top row: one icon per weapon type
+        // Top row: weapon filter icons
         int col = 0;
         for (WeaponType t : WeaponType.values()) {
             if (t == WeaponType.KNIFE) continue;
             ItemStack icon = new ItemBuilder(t.getMaterial())
                     .name("&f" + t.getDisplayName())
-                    .lore("&7Click to view skins")
+                    .lore("&7Click to filter skins")
                     .customModel(t.getCustomModelId())
                     .build();
             inv.setItem(col, icon);
@@ -52,15 +52,24 @@ public class SkinGUI {
         for (SkinManager.SkinData skin : skins) {
             if (slot >= 45) break;
             boolean owned = skinManager.hasSkin(p.getUniqueId(), skin.id());
+            boolean equipped = skinManager.isEquipped(p.getUniqueId(), skin.id());
+
+            List<String> lore = new java.util.ArrayList<>();
+            lore.add("&7Collection: &b" + skin.collection());
+            lore.add("&7Tier: &e" + skin.tier().displayName);
+            lore.add("&7Weapon: &f" + skin.weaponType().getDisplayName());
+            lore.add("");
+            if (equipped) {
+                lore.add("&a✔ EQUIPPED");
+            } else if (owned) {
+                lore.add("&eClick to equip");
+            } else {
+                lore.add("&cLocked — buy in shop");
+            }
+
             ItemStack item = new ItemBuilder(skin.weaponType().getMaterial())
-                    .name((owned ? "&a" : "&8") + skin.displayName())
-                    .lore(
-                            "&7Collection: &b" + skin.collection(),
-                            "&7Tier: &e" + skin.tier().displayName,
-                            "&7Weapon: &f" + skin.weaponType().getDisplayName(),
-                            "",
-                            owned ? "&aClick to equip" : "&cLocked — buy in shop"
-                    )
+                    .name((equipped ? "&a✔ &l" : (owned ? "&e&l" : "&8")) + skin.displayName())
+                    .lore(lore)
                     .customModel(skin.customModelId())
                     .build();
             inv.setItem(slot++, item);

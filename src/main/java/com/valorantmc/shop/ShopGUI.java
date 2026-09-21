@@ -75,11 +75,65 @@ public class ShopGUI {
         addAbilityBuy(inv, 41, 'E', player);
         addDivider(inv, 42, "&7── Abilities ──");
 
-        // ── Row 5: Credits display ────────────────────────────────────────────
+        // ── Row 5: Info / Refund / Requests ──────────────────────────────────
+        List<com.valorantmc.managers.ShopManager.PurchaseRecord> purchases =
+                ValorantMC.getInstance().getShopManager().getRoundPurchases(player);
+        if (!purchases.isEmpty()) {
+            com.valorantmc.managers.ShopManager.PurchaseRecord last = purchases.get(purchases.size() - 1);
+            ItemStack refundBtn = buildItem(Material.REDSTONE,
+                    ValorantMC.colorize("&c&lREFUND LAST PURCHASE"),
+                    List.of(
+                            ValorantMC.colorize("&7Last bought: &f" + last.displayName() + " &6(+" + last.cost() + "c)"),
+                            "",
+                            ValorantMC.colorize("&eClick to refund 100% of credits!")
+                    ));
+            ItemMeta meta = refundBtn.getItemMeta();
+            if (meta != null) {
+                meta.getPersistentDataContainer().set(
+                        new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "shop_refund"),
+                        org.bukkit.persistence.PersistentDataType.BOOLEAN, true);
+                refundBtn.setItemMeta(meta);
+            }
+            inv.setItem(48, refundBtn);
+        }
+
         ItemStack creditsDisplay = buildItem(Material.GOLD_INGOT,
                 ValorantMC.colorize("&6Credits: &f" + credits),
                 List.of(ValorantMC.colorize("&7Your available credits this round.")));
         inv.setItem(49, creditsDisplay);
+
+        com.valorantmc.game.ValorantGame game = ValorantMC.getInstance().getGameManager().getGame(player);
+        if (game != null) {
+            com.valorantmc.game.ValorantTeam team = game.getTeam(player);
+            if (team != null) {
+                for (Player tm : team.getOnlinePlayers()) {
+                    if (tm.equals(player)) continue;
+                    WeaponType req = ValorantMC.getInstance().getShopManager().getPendingRequest(tm);
+                    if (req != null) {
+                        ItemStack reqBtn = buildItem(Material.EMERALD,
+                                ValorantMC.colorize("&a&lBUY FOR " + tm.getName().toUpperCase()),
+                                List.of(
+                                        ValorantMC.colorize("&7Requested: &f" + req.getDisplayName()),
+                                        ValorantMC.colorize("&7Cost: &6" + req.getCost() + "c"),
+                                        "",
+                                        ValorantMC.colorize("&eClick to purchase for " + tm.getName() + "!")
+                                ));
+                        ItemMeta meta = reqBtn.getItemMeta();
+                        if (meta != null) {
+                            meta.getPersistentDataContainer().set(
+                                    new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "shop_buyfor_player"),
+                                    org.bukkit.persistence.PersistentDataType.STRING, tm.getName());
+                            meta.getPersistentDataContainer().set(
+                                    new org.bukkit.NamespacedKey(ValorantMC.getInstance(), "shop_buyfor_weapon"),
+                                    org.bukkit.persistence.PersistentDataType.STRING, req.name());
+                            reqBtn.setItemMeta(meta);
+                        }
+                        inv.setItem(50, reqBtn);
+                        break;
+                    }
+                }
+            }
+        }
 
         // Fill empty slots with glass
         ItemStack filler = buildItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of());
@@ -107,10 +161,14 @@ public class ShopGUI {
             lore.add(ValorantMC.colorize((canAfford ? "&a" : "&c") + "Cost: &6" + type.getCost() + "c"));
         }
         lore.add("");
-        lore.add(ValorantMC.colorize(canAfford ? "&eClick to buy!" : "&cInsufficient credits"));
+        lore.add(ValorantMC.colorize(canAfford ? "&eLeft-Click: &fBuy  &8|  &eRight-Click: &fRequest" : "&cRight-Click: Request from Team"));
 
         String name = (canAfford ? "&f" : "&8") + "&l" + type.getDisplayName();
-        ItemStack item = buildItem(type.getMaterial(), ValorantMC.colorize(name), lore);
+        ItemStack item = new com.valorantmc.utils.ItemBuilder(type.getMaterial())
+                .name(name)
+                .lore(lore)
+                .customModel(type.getCustomModelId())
+                .build();
 
         // Store weapon id in NBT
         ItemMeta meta = item.getItemMeta();

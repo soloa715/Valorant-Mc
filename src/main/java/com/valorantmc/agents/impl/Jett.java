@@ -55,7 +55,7 @@ public class Jett extends Agent {
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.BLINDNESS, 30, 0, false, false));
                         p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.SLOWNESS, 20, 1, false, false));
+                                org.bukkit.potion.PotionEffectType.SLOW, 20, 1, false, false));
                     }
                 }
                 ticks += 4;
@@ -95,22 +95,50 @@ public class Jett extends Agent {
         if (!abilityX.isUltReady()) { player.sendMessage(ValorantMC.colorize("&cBlade Storm not ready!")); return; }
         abilityX.activateUlt();
 
-        player.sendMessage(ValorantMC.colorize("&6&lBLADE STORM ACTIVATED! Right-click to throw blades!"));
+        player.sendMessage(ValorantMC.colorize("&6&lBLADE STORM ACTIVATED! &eLeft-Click: Single Throw | Right-Click: Burst"));
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1.3f);
         player.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                org.bukkit.potion.PotionEffectType.SPEED, 200, 1, false, false));
+                org.bukkit.potion.PotionEffectType.SPEED, 400, 1, false, false));
 
-        // Mark player as in blade-storm mode (handled in AbilityListener)
+        // Mark player as in blade-storm mode
         player.getPersistentDataContainer().set(
                 new NamespacedKey(ValorantMC.getInstance(), "bladestorm"),
                 org.bukkit.persistence.PersistentDataType.BOOLEAN, true);
 
-        // Duration 5 seconds
-        ValorantMC.getInstance().getServer().getScheduler().runTaskLater(ValorantMC.getInstance(), () -> {
-            player.getPersistentDataContainer().remove(
-                    new NamespacedKey(ValorantMC.getInstance(), "bladestorm"));
-            player.sendMessage(ValorantMC.colorize("&6Blade Storm ended."));
-        }, 100L);
+        // Equip Blade Storm item in hand
+        player.getInventory().setItemInMainHand(createBladeStormItem(5));
+    }
+
+    public static org.bukkit.inventory.ItemStack createBladeStormItem(int count) {
+        org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.IRON_SWORD);
+        org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ValorantMC.colorize("&6&lBlade Storm &7[" + count + "/5]"));
+            meta.setCustomModelData(7001); // 3D knife model
+            meta.setUnbreakable(true);
+            meta.setLore(java.util.List.of(
+                    ValorantMC.colorize("&7Jett's Ultimate Throwing Daggers"),
+                    ValorantMC.colorize("&eLeft-Click: &fThrow 1 dagger &7(50 body / 150 head)"),
+                    ValorantMC.colorize("&eRight-Click: &fShotgun burst of all daggers"),
+                    ValorantMC.colorize("&aKills refresh all 5 daggers!")
+            ));
+            meta.getPersistentDataContainer().set(
+                    new NamespacedKey(ValorantMC.getInstance(), "bladestorm_item"),
+                    org.bukkit.persistence.PersistentDataType.BOOLEAN, true);
+            meta.getPersistentDataContainer().set(
+                    new NamespacedKey(ValorantMC.getInstance(), "bladestorm_knives"),
+                    org.bukkit.persistence.PersistentDataType.INTEGER, count);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static void refreshBladeStorm(Player player, int count) {
+        if (!player.getPersistentDataContainer().has(
+                new NamespacedKey(ValorantMC.getInstance(), "bladestorm"),
+                org.bukkit.persistence.PersistentDataType.BOOLEAN)) return;
+
+        player.getInventory().setItemInMainHand(createBladeStormItem(count));
     }
 
     @Override
@@ -120,6 +148,15 @@ public class Jett extends Agent {
         if (dashKills >= 2 && !abilityE.canUse()) {
             abilityE.resetCharges();
             player.sendMessage(ValorantMC.colorize("&b[Jett] &fTailwind recharged!"));
+        }
+
+        // Refresh Blade Storm daggers on kill if active
+        if (Boolean.TRUE.equals(player.getPersistentDataContainer().get(
+                new NamespacedKey(ValorantMC.getInstance(), "bladestorm"),
+                org.bukkit.persistence.PersistentDataType.BOOLEAN))) {
+            refreshBladeStorm(player, 5);
+            player.sendMessage(ValorantMC.colorize("&6&l[Blade Storm] &aKill! Daggers refreshed to 5/5!"));
+            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.8f);
         }
     }
 }

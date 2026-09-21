@@ -282,8 +282,8 @@ public class AdminListener implements Listener {
         }
         if (action.equals("troll_freeze")) {
             if (ensureTarget(admin, target)) {
-                target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 254));
-                target.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 200, 128));
+                target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 254));
+                target.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 200, 128));
                 admin.sendMessage(ok(target, "freeze (10s)"));
                 refreshTroll(admin, target);
             }
@@ -291,7 +291,7 @@ public class AdminListener implements Listener {
         }
         if (action.equals("troll_unfreeze")) {
             if (ensureTarget(admin, target)) {
-                target.clearActivePotionEffects();
+                target.getActivePotionEffects().forEach(effect -> target.removePotionEffect(effect.getType()));
                 admin.sendMessage(ok(target, "unfreeze/clear effects"));
                 refreshTroll(admin, target);
             }
@@ -307,7 +307,7 @@ public class AdminListener implements Listener {
         }
         if (action.equals("troll_nausea")) {
             if (ensureTarget(admin, target)) {
-                target.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 160, 0));
+                target.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 160, 0));
                 admin.sendMessage(ok(target, "nausea (8s)"));
                 refreshTroll(admin, target);
             }
@@ -413,7 +413,7 @@ public class AdminListener implements Listener {
         }
         if (action.equals("troll_cleareffects")) {
             if (ensureTarget(admin, target)) {
-                target.clearActivePotionEffects();
+                target.getActivePotionEffects().forEach(effect -> target.removePotionEffect(effect.getType()));
                 admin.sendMessage(ok(target, "cleared effects"));
                 refreshTroll(admin, target);
             }
@@ -429,7 +429,7 @@ public class AdminListener implements Listener {
         }
         if (action.equals("troll_slow")) {
             if (ensureTarget(admin, target)) {
-                target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 2));
+                target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 2));
                 admin.sendMessage(ok(target, "slowness III (10s)"));
                 refreshTroll(admin, target);
             }
@@ -837,7 +837,7 @@ public class AdminListener implements Listener {
 
         Weapon w = new Weapon(wt);
         int slot = plugin.getShopManager().getPreferredSlot(wt);
-        target.getInventory().setItem(slot, w.toItemStack(target.getUniqueId()));
+        plugin.getWeaponManager().giveTaCZWeapon(target, wt, slot);
         plugin.getWeaponManager().setHeldWeapon(target, w);
         target.getInventory().setHeldItemSlot(slot);
         target.sendMessage(ValorantMC.colorize("&6[Admin] §fYou received §b" + wt.getDisplayName() + "§f."));

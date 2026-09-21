@@ -43,7 +43,7 @@ public class Killjoy extends Agent {
         Location loc = safeTarget(player, 6).add(0.5, 1, 0.5);
         nanoswarmLocations.add(loc);
 
-        player.getWorld().spawnParticle(Particle.ENCHANTED_HIT, loc, 5, 0.1, 0.1, 0.1, 0);
+        player.getWorld().spawnParticle(Particle.CRIT_MAGIC, loc, 5, 0.1, 0.1, 0.1, 0);
         player.sendMessage(ValorantMC.colorize("&e[Killjoy] &fNanoswarm placed! Right-click the item again to detonate."));
 
         // Auto-detonate after 20s if not triggered
@@ -77,7 +77,7 @@ public class Killjoy extends Agent {
                         ticks += 200; // reduce scan after trigger
                     }
                 }
-                loc.getWorld().spawnParticle(Particle.ENCHANTED_HIT, loc, 1, 0.1, 0.1, 0.1, 0);
+                loc.getWorld().spawnParticle(Particle.CRIT_MAGIC, loc, 1, 0.1, 0.1, 0.1, 0);
                 ticks += 5;
             }
         }.runTaskTimer(ValorantMC.getInstance(), 0L, 5L);
@@ -125,7 +125,7 @@ public class Killjoy extends Agent {
                     // Fire a bullet
                     loc.getWorld().spawnParticle(Particle.CRIT, loc.clone().add(0, 1, 0), 3, 0, 0, 0, 0.5);
                     game.applyDamage(player, p, 18, false, false);
-                    p.sendActionBar(ValorantMC.colorize("&e[Turret] &fKilljoy's turret is shooting you!"));
+                    ValorantMC.sendActionBar(p, "&e[Turret] &fKilljoy's turret is shooting you!");
                     return; // only shoot one target per scan
                 }
             }
@@ -154,7 +154,7 @@ public class Killjoy extends Agent {
                         if (game.getTeam(p).getSide().equals(game.getTeam(player).getSide())) continue;
                         if (p.getLocation().distance(center) <= 13) {
                             p.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                    org.bukkit.potion.PotionEffectType.SLOWNESS, 100, 255, false, false));
+                                    org.bukkit.potion.PotionEffectType.SLOW, 100, 255, false, false));
                             p.addPotionEffect(new org.bukkit.potion.PotionEffect(
                                     org.bukkit.potion.PotionEffectType.WEAKNESS, 100, 255, false, false));
                             p.sendMessage(ValorantMC.colorize("&e[Lockdown] &cYou are detained!"));

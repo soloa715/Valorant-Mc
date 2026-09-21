@@ -47,7 +47,7 @@ public class Skye extends Agent {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 60) { cancel(); return; }
-                player.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, player.getLocation().add(0, 1, 0), 5, 1, 0.5, 1, 0.1);
+                player.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, player.getLocation().add(0, 1, 0), 5, 1, 0.5, 1, 0.1);
                 for (Player ally : player.getWorld().getPlayers()) {
                     if (ally.equals(player)) continue;
                     if (game.getTeam(ally) == null || game.getTeam(player) == null) continue;
@@ -100,7 +100,7 @@ public class Skye extends Agent {
                 if (target != null) {
                     Vector toward = target.getLocation().toVector().subtract(wolf.getLocation().toVector()).normalize().multiply(0.5);
                     wolf.setVelocity(toward.setY(0.1));
-                    wolf.getWorld().spawnParticle(Particle.DUST, wolf.getLocation(), 3, 0.2, 0.2, 0.2, 0,
+                    wolf.getWorld().spawnParticle(Particle.REDSTONE, wolf.getLocation(), 3, 0.2, 0.2, 0.2, 0,
                             new Particle.DustOptions(Color.fromRGB(50, 200, 80), 1.2f));
 
                     // Explode on reach
@@ -114,7 +114,7 @@ public class Skye extends Agent {
                             if (p.getLocation().distance(wolf.getLocation()) <= 3) {
                                 p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0, false, false));
                                 game.applyDamage(player, p, 30, false, false);
-                                p.sendActionBar(ValorantMC.colorize("&2[Trailblazer] &fHit!"));
+                                ValorantMC.sendActionBar(p, "&2[Trailblazer] &fHit!");
                             }
                         }
                         wolf.remove();
@@ -135,7 +135,7 @@ public class Skye extends Agent {
 
         Location flashLoc = safeTarget(player, 18);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PARROT_FLY, 1f, 1.4f);
-        player.getWorld().spawnParticle(Particle.DUST, flashLoc, 20, 1, 1, 1, 0,
+        player.getWorld().spawnParticle(Particle.REDSTONE, flashLoc, 20, 1, 1, 1, 0,
                 new Particle.DustOptions(Color.fromRGB(255, 220, 80), 1.5f));
         player.getWorld().playSound(flashLoc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.5f, 2.0f);
         player.sendMessage(ValorantMC.colorize("&2[Skye] &fGuiding Light!"));
@@ -151,7 +151,7 @@ public class Skye extends Agent {
             double dot = pLook.dot(toFlash);
             if (dot > 0.0) { // facing toward flash
                 p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 50, 0, false, false));
-                p.sendActionBar(ValorantMC.colorize("&2[Guiding Light] &fFlashed!"));
+                ValorantMC.sendActionBar(p, "&2[Guiding Light] &fFlashed!");
             }
         }
     }
@@ -197,11 +197,11 @@ public class Skye extends Agent {
                     if (target != null) {
                         Vector toward = target.getLocation().toVector().subtract(orb.getLocation().toVector()).normalize().multiply(0.4);
                         orb.setVelocity(toward);
-                        orb.getWorld().spawnParticle(Particle.DUST, orb.getLocation(), 2, 0.1, 0.1, 0.1, 0,
+                        orb.getWorld().spawnParticle(Particle.REDSTONE, orb.getLocation(), 2, 0.1, 0.1, 0.1, 0,
                                 new Particle.DustOptions(Color.fromRGB(50, 255, 100), 1f));
                         if (nearest < 1.5) {
                             target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 50, 0, false, false));
-                            target.sendActionBar(ValorantMC.colorize("&2[Seeker] &fFound!"));
+                            ValorantMC.sendActionBar(target, "&2[Seeker] &fFound!");
                             orb.getWorld().spawnParticle(Particle.FLASH, orb.getLocation(), 1);
                             orb.remove();
                             cancel();

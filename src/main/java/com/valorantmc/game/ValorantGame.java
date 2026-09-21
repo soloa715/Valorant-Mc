@@ -6,11 +6,9 @@ import com.valorantmc.managers.EconomyManager;
 import com.valorantmc.managers.MapManager;
 import com.valorantmc.weapons.Weapon;
 import com.valorantmc.weapons.WeaponType;
-import net.kyori.adventure.bossbar.BossBar;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.title.Title;
-import java.time.Duration;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -109,12 +107,13 @@ public class ValorantGame {
         playerHealth.put(p.getUniqueId(), 100);
         playerShield.put(p.getUniqueId(), 0);
         plugin.getEconomyManager().initPlayer(p.getUniqueId());
+        if (bossBar != null) bossBar.addPlayer(p);
         updateScoreboard();
         p.sendMessage(plugin.msg("game.join"));
     }
 
     public void removePlayer(Player p) {
-        if (bossBar != null) p.hideBossBar(bossBar);
+        if (bossBar != null) bossBar.removePlayer(p);
         attackers.removePlayer(p);
         defenders.removePlayer(p);
         playerAgents.remove(p.getUniqueId());
@@ -155,7 +154,11 @@ public class ValorantGame {
         getAllPlayers().forEach(p -> {
             p.setGameMode(GameMode.ADVENTURE);
             p.getInventory().clear();
-            p.openInventory(com.valorantmc.shop.AgentSelectGUI.build(p));
+            if (plugin.getFabricChannelListener() != null && plugin.getFabricChannelListener().hasMod(p)) {
+                plugin.getFabricChannelListener().sendAgentSelect(p);
+            } else {
+                p.openInventory(com.valorantmc.shop.AgentSelectGUI.build(p));
+            }
             p.sendMessage(ValorantMC.colorize("&a&lPick an agent to join the round!"));
         });
 
@@ -163,7 +166,7 @@ public class ValorantGame {
         final int maxWaitTicks = 20 * 45;
         final int agentSelectSeconds = 45;
         final int[] elapsed = {0};
-        startBossBar(BossBar.Color.PURPLE, "AGENT SELECT — 0:45", 1f);
+        startBossBar(BarColor.PURPLE, "AGENT SELECT — 0:45", 1f);
         if (agentSelectTask != null) agentSelectTask.cancel();
         agentSelectTask = new BukkitRunnable() {
             @Override public void run() {
@@ -175,12 +178,13 @@ public class ValorantGame {
                         (float) remaining / agentSelectSeconds);
                 getAllPlayers().forEach(p -> {
                     if (!playerAgents.containsKey(p.getUniqueId())) {
-                        p.sendActionBar(ValorantMC.colorize("&c&lPICK AN AGENT! &7(" + remaining + "s)"));
+                        ValorantMC.sendActionBar(p, "&c&lPICK AN AGENT! &7(" + remaining + "s)");
                     } else {
-                        p.sendActionBar(ValorantMC.colorize("&aReady — waiting for others (" + remaining + "s)"));
+                        ValorantMC.sendActionBar(p, "&aReady — waiting for others (" + remaining + "s)");
                     }
                 });
                 if (everyonePicked || elapsed[0] >= maxWaitTicks) {
+                    cancel();
                     // Auto-assign a random agent to anyone still missing
                     for (Player p : getAllPlayers()) {
                         if (!playerAgents.containsKey(p.getUniqueId())) {
@@ -195,7 +199,6 @@ public class ValorantGame {
                         p.closeInventory();
                     }
                     startBuyPhase();
-                    cancel();
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
@@ -223,18 +226,21 @@ public class ValorantGame {
         int buyDuration = plugin.getConfig().getInt("game.buy-phase-duration", 30);
         broadcast(ValorantMC.colorize("&e&lROUND " + currentRound + " — Buy Phase! &r&7(" + buyDuration + "s)"));
         broadcastTitle(
-                Component.text("ROUND " + currentRound).color(NamedTextColor.YELLOW),
-                Component.text("BUY PHASE — " + buyDuration + "s").color(NamedTextColor.GRAY));
+                "&eROUND " + currentRound,
+                "&7BUY PHASE — " + buyDuration + "s");
 
         updateScoreboard();
         final String buyLabel = "ROUND " + currentRound + " • BUY PHASE — ";
-        startBossBar(BossBar.Color.YELLOW, buyLabel + formatTime(buyDuration), 1f);
+        startBossBar(BarColor.YELLOW, buyLabel + formatTime(buyDuration), 1f);
 
         // Open shop for everyone 40 ticks after teleport so inventory is stable
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (state != GameState.BUY_PHASE) return;
             getAllPlayers().forEach(p -> {
                 p.openInventory(com.valorantmc.shop.ShopGUI.build(p));
+                if (plugin.getFabricChannelListener() != null) {
+                    plugin.getFabricChannelListener().sendBuyMenu(p, true);
+                }
             });
         }, 40L);
 
@@ -250,8 +256,8 @@ public class ValorantGame {
                 // Remind players with action bar when they don't have the shop open
                 if (remaining > 0) {
                     getAllPlayers().forEach(p ->
-                        p.sendActionBar(ValorantMC.colorize(
-                            "&e◼ BARRIER ACTIVE &8| &7Shop: &b/vshop &8| &7" + remaining + "s")));
+                        ValorantMC.sendActionBar(p,
+                            "&e◼ BARRIER ACTIVE &8| &7Shop: &b/vshop &8| &7" + remaining + "s"));
                 }
                 if (remaining <= 0) { startRound(); cancel(); }
             }
@@ -262,6 +268,9 @@ public class ValorantGame {
         // Lift spawn barriers
         spawnLock.clear();
         stopBarrierParticles();
+        if (plugin.getFabricChannelListener() != null) {
+            getAllPlayers().forEach(p -> plugin.getFabricChannelListener().sendBuyMenu(p, false));
+        }
 
         state = GameState.ROUND_ACTIVE;
         int roundDuration = plugin.getConfig().getInt("game.round-duration", 100);
@@ -280,8 +289,8 @@ public class ValorantGame {
 
         broadcast(ValorantMC.colorize("&c&lFIGHT!"));
         broadcastTitle(
-                Component.text("FIGHT!").color(NamedTextColor.RED),
-                Component.text("Round " + currentRound + " of " + maxRounds).color(NamedTextColor.GRAY));
+                "&cFIGHT!",
+                "&7Round " + currentRound + " of " + maxRounds);
 
         // Give spike to random attacker
         List<Player> atks = attackers.getOnlinePlayers();
@@ -293,7 +302,7 @@ public class ValorantGame {
 
         updateScoreboard();
         final String roundLabel = "ROUND " + currentRound + " • LIVE — ";
-        startBossBar(BossBar.Color.RED, roundLabel + formatTime(roundDuration), 1f);
+        startBossBar(BarColor.RED, roundLabel + formatTime(roundDuration), 1f);
 
         timerTask = new BukkitRunnable() {
             int remaining = roundDuration;
@@ -332,11 +341,8 @@ public class ValorantGame {
                 + " &r&6win the round! &7(" + reason + ")"));
         // Round-end title
         boolean atkWon = winningSide == ValorantTeam.Side.ATTACKERS;
-        Component roundTitle = atkWon
-                ? Component.text("ATTACKERS WIN").color(NamedTextColor.RED)
-                : Component.text("DEFENDERS WIN").color(NamedTextColor.AQUA);
-        Component roundSub = Component.text(attackers.getRoundWins() + " — " + defenders.getRoundWins())
-                .color(NamedTextColor.WHITE);
+        String roundTitle = atkWon ? "&cATTACKERS WIN" : "&bDEFENDERS WIN";
+        String roundSub = "&f" + attackers.getRoundWins() + " — " + defenders.getRoundWins();
         broadcastTitle(roundTitle, roundSub);
 
         // Economy awards
@@ -363,8 +369,8 @@ public class ValorantGame {
                 isOvertime = true;
                 broadcast(ValorantMC.colorize("&6&lOVERTIME! First team to win 2 rounds in a row wins!"));
                 broadcastTitle(
-                        Component.text("OVERTIME").color(NamedTextColor.GOLD),
-                        Component.text("12 — 12").color(NamedTextColor.WHITE));
+                        "&6OVERTIME",
+                        "&f12 — 12");
                 plugin.getServer().getScheduler().runTaskLater(plugin, this::startBuyPhase, 80L);
                 return;
             }
@@ -401,7 +407,7 @@ public class ValorantGame {
 
     private void endGame(ValorantTeam winner) {
         state = GameState.GAME_OVER;
-        if (bossBar != null) bossBar.name(Component.text("Game Over!"));
+        if (bossBar != null) bossBar.setTitle("Game Over!");
 
         broadcast(ValorantMC.colorize("&6&l========= GAME OVER ========="));
         broadcast(ValorantMC.colorize(winner.getChatColor() + "&l" + winner.getDisplayName() + " WIN!"));
@@ -410,15 +416,9 @@ public class ValorantGame {
         // VICTORY / DEFEAT title per player
         getAllPlayers().forEach(p -> {
             boolean won = getTeam(p) == winner;
-            Component endTitle = won
-                    ? Component.text("VICTORY").color(NamedTextColor.GOLD)
-                    : Component.text("DEFEAT").color(NamedTextColor.RED);
-            Component endSub = Component.text(
-                    attackers.getRoundWins() + " — " + defenders.getRoundWins())
-                    .color(NamedTextColor.WHITE);
-            Title.Times t = Title.Times.times(
-                    Duration.ofMillis(500), Duration.ofMillis(4000), Duration.ofMillis(800));
-            p.showTitle(Title.title(endTitle, endSub, t));
+            String endTitle = won ? "&6VICTORY" : "&cDEFEAT";
+            String endSub = "&f" + attackers.getRoundWins() + " — " + defenders.getRoundWins();
+            ValorantMC.sendTitle(p, endTitle, endSub, 10, 80, 20);
         });
 
         // Match summary
@@ -463,13 +463,13 @@ public class ValorantGame {
                         double x = center.getX() + BARRIER_RADIUS * Math.cos(rad);
                         double z = center.getZ() + BARRIER_RADIUS * Math.sin(rad);
                         // Low ring (floor level)
-                        p.spawnParticle(Particle.DUST, x, center.getY() + 0.1, z, 1, 0, 0, 0,
+                        p.spawnParticle(Particle.REDSTONE, x, center.getY() + 0.1, z, 1, 0, 0, 0,
                                 new Particle.DustOptions(org.bukkit.Color.fromRGB(220, 50, 50), 1.4f));
                         // Mid ring (chest height)
-                        p.spawnParticle(Particle.DUST, x, center.getY() + 1.5, z, 1, 0, 0, 0,
+                        p.spawnParticle(Particle.REDSTONE, x, center.getY() + 1.5, z, 1, 0, 0, 0,
                                 new Particle.DustOptions(org.bukkit.Color.fromRGB(255, 100, 100), 1.2f));
                         // Top ring (above head)
-                        p.spawnParticle(Particle.DUST, x, center.getY() + 2.8, z, 1, 0, 0, 0,
+                        p.spawnParticle(Particle.REDSTONE, x, center.getY() + 2.8, z, 1, 0, 0, 0,
                                 new Particle.DustOptions(org.bukkit.Color.fromRGB(180, 30, 30), 1.0f));
                     }
                 });
@@ -496,7 +496,8 @@ public class ValorantGame {
         stopBarrierParticles();
         spike.reset();
         if (bossBar != null) {
-            getAllPlayers().forEach(p -> p.hideBossBar(bossBar));
+            bossBar.removeAll();
+            bossBar = null;
         }
         if (Bukkit.getScoreboardManager() != null) {
             getAllPlayers().forEach(p ->
@@ -565,8 +566,8 @@ public class ValorantGame {
         // Send hit confirmation to shooter
         if (source != null) {
             String location = isHeadshot ? "&c[HEADSHOT]" : isLegshot ? "&7[LEG]" : "&f[BODY]";
-            source.sendActionBar(ValorantMC.colorize(location + " &f" + finalDamage
-                    + " &8→ " + target.getName() + " &8(" + Math.max(0, hp) + "hp)"));
+            ValorantMC.sendActionBar(source, location + " &f" + finalDamage
+                    + " &8→ " + target.getName() + " &8(" + Math.max(0, hp) + "hp)");
         }
 
         // Custom: broadcast enemy HP to all after every hit
@@ -676,7 +677,7 @@ public class ValorantGame {
         String feedMsg = killerColor + (killer != null ? killer.getName() : "")
                 + " §f✦ " + victimColor + victim.getName()
                 + (headshot ? " §c§l[HEADSHOT]" : "");
-        getAllPlayers().forEach(p -> p.sendActionBar(net.kyori.adventure.text.Component.text(feedMsg)));
+        getAllPlayers().forEach(p -> ValorantMC.sendActionBar(p, feedMsg));
         // Notify mod clients of kill feed entry
         com.valorantmc.network.FabricChannelListener fab = plugin.getFabricChannelListener();
         if (fab != null) {
@@ -687,9 +688,7 @@ public class ValorantGame {
             });
         }
         // ELIMINATED title for victim
-        showTitle(victim,
-                Component.text("ELIMINATED").color(NamedTextColor.RED),
-                Component.text("Wait for next round").color(NamedTextColor.GRAY));
+        showTitle(victim, "&cELIMINATED", "&7Wait for next round");
 
         // Death recap — private message to the victim
         if (killer != null) {
@@ -750,9 +749,9 @@ public class ValorantGame {
             // Slot 0 = primary (empty until bought), Slot 1 = Classic, Slot 2 = Knife,
             // Slot 3 = Spike (only for spike carrier — added later), Slots 4-7 = abilities
             Weapon classic = new Weapon(WeaponType.CLASSIC);
-            p.getInventory().setItem(1, classic.toItemStack(p.getUniqueId()));
+            plugin.getWeaponManager().giveTaCZWeapon(p, WeaponType.CLASSIC, 1);
             Weapon knife = new Weapon(WeaponType.KNIFE);
-            p.getInventory().setItem(2, knife.toItemStack(p.getUniqueId()));
+            plugin.getWeaponManager().giveTaCZWeapon(p, WeaponType.KNIFE, 2);
             // Re-apply abilities for the player's selected agent (slots 4-7)
             Agent agent = playerAgents.get(p.getUniqueId());
             if (agent != null) {
@@ -790,8 +789,10 @@ public class ValorantGame {
             playerShield.put(p.getUniqueId(), 0);
             p.setHealth(20);
             p.setFoodLevel(20);
-            p.clearActivePotionEffects();
-            p.setSpectatorTarget(null);
+            p.getActivePotionEffects().forEach(effect -> p.removePotionEffect(effect.getType()));
+            if (p.getGameMode() == GameMode.SPECTATOR) {
+                p.setSpectatorTarget(null);
+            }
             p.setGameMode(GameMode.ADVENTURE);
         });
         // Custom: wallhack glow is re-applied each round start; clear it during revive window
@@ -835,18 +836,13 @@ public class ValorantGame {
     }
 
     /** Broadcast a title + subtitle to all players in the game */
-    private void broadcastTitle(Component main, Component sub) {
-        Title.Times times = Title.Times.times(
-                Duration.ofMillis(300), Duration.ofMillis(2500), Duration.ofMillis(600));
-        Title title = Title.title(main, sub, times);
-        getAllPlayers().forEach(p -> p.showTitle(title));
+    private void broadcastTitle(String main, String sub) {
+        getAllPlayers().forEach(p -> ValorantMC.sendTitle(p, main, sub, 10, 50, 15));
     }
 
     /** Show a personalised title to one player */
-    private void showTitle(Player player, Component main, Component sub) {
-        Title.Times times = Title.Times.times(
-                Duration.ofMillis(300), Duration.ofMillis(2500), Duration.ofMillis(600));
-        player.showTitle(Title.title(main, sub, times));
+    private void showTitle(Player player, String main, String sub) {
+        ValorantMC.sendTitle(player, main, sub, 10, 50, 15);
     }
 
     // ── Scoreboard ────────────────────────────────────────────────────────────
@@ -895,16 +891,17 @@ public class ValorantGame {
 
     // ── BossBar ───────────────────────────────────────────────────────────────
 
-    private void startBossBar(BossBar.Color color, String text, float progress) {
-        if (bossBar != null) getAllPlayers().forEach(p -> p.hideBossBar(bossBar));
-        bossBar = BossBar.bossBar(Component.text(text), progress, color, BossBar.Overlay.PROGRESS);
-        getAllPlayers().forEach(p -> p.showBossBar(bossBar));
+    private void startBossBar(BarColor color, String text, float progress) {
+        if (bossBar != null) bossBar.removeAll();
+        bossBar = Bukkit.createBossBar(text, color, BarStyle.SOLID);
+        bossBar.setProgress(Math.max(0, Math.min(1, progress)));
+        getAllPlayers().forEach(p -> bossBar.addPlayer(p));
     }
 
     private void updateBossBar(String text, float progress) {
         if (bossBar == null) return;
-        bossBar.name(Component.text(text));
-        bossBar.progress(Math.max(0, Math.min(1, progress)));
+        bossBar.setTitle(text);
+        bossBar.setProgress(Math.max(0, Math.min(1, progress)));
     }
 
     // ── Broadcast ─────────────────────────────────────────────────────────────
@@ -933,16 +930,10 @@ public class ValorantGame {
     public void announceSpikePlanted(Location loc) {
         // Title: defenders see urgent warning, attackers see confirmation
         attackers.getOnlinePlayers().forEach(p -> {
-            Title.Times t = Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(2000), Duration.ofMillis(400));
-            p.showTitle(Title.title(
-                    Component.text("SPIKE PLANTED").color(NamedTextColor.GREEN),
-                    Component.text("Defend until detonation!").color(NamedTextColor.GRAY), t));
+            ValorantMC.sendTitle(p, "&aSPIKE PLANTED", "&7Defend until detonation!", 5, 40, 10);
         });
         defenders.getOnlinePlayers().forEach(p -> {
-            Title.Times t = Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(2000), Duration.ofMillis(400));
-            p.showTitle(Title.title(
-                    Component.text("SPIKE PLANTED").color(NamedTextColor.RED),
-                    Component.text("DEFUSE IT!").color(NamedTextColor.YELLOW), t));
+            ValorantMC.sendTitle(p, "&cSPIKE PLANTED", "&eDEFUSE IT!", 5, 40, 10);
         });
         broadcast(ValorantMC.colorize("&c&lSPIKE PLANTED &7at " + formatLoc(loc) + "!"));
     }
@@ -950,8 +941,8 @@ public class ValorantGame {
     /** Called by AbilityListener when the spike is defused. */
     public void announceSpikeDefused() {
         broadcastTitle(
-                Component.text("SPIKE DEFUSED").color(NamedTextColor.AQUA),
-                Component.text("Defenders win the round!").color(NamedTextColor.GRAY));
+                "&bSPIKE DEFUSED",
+                "&7Defenders win the round!");
         broadcast(ValorantMC.colorize("&b&lSPIKE DEFUSED!"));
     }
 
@@ -972,7 +963,7 @@ public class ValorantGame {
         paused = true;
         if (timerTask != null) { timerTask.cancel(); timerTask = null; }
         broadcast(ValorantMC.colorize("&e&l[ADMIN] &eGame paused."));
-        updateBossBar("PAUSED", bossBar != null ? bossBar.progress() : 1f);
+        updateBossBar("PAUSED", bossBar != null ? (float) bossBar.getProgress() : 1f);
     }
 
     public void resume() {
