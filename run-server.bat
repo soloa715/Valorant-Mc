@@ -24,7 +24,7 @@ set RUN_DIR=%~dp0run
 set SERVER_DIR=%RUN_DIR%\server
 set CLIENT_MODS_DIR=%RUN_DIR%\client-mods
 
-set MC_VERSION=1.21.4
+set MC_VERSION=1.20.1
 set LOADER_VERSION=0.19.2
 set FABRIC_INSTALLER_VERSION=1.0.1
 set FABRIC_INSTALLER_JAR=fabric-installer-%FABRIC_INSTALLER_VERSION%.jar
@@ -43,79 +43,21 @@ echo ============================================================
 echo.
 
 REM ═══════════════════════════════════════════════════════════════
-REM  STEP 1 — Find Java 25+
-REM  Checks: JAVA_HOME env, PATH, common install dirs, tools\jdk25
-REM  Downloads Temurin 25 automatically if nothing works
+REM  STEP 1 — Find Java 17
 REM ═══════════════════════════════════════════════════════════════
-echo [1/4] Locating Java 25...
-set JAVA_HOME=
+echo [1/4] Locating Java 17...
 
-REM --- 1. Use %JAVA_HOME% if already set and points to Java 25 ---
-if defined JAVA_HOME (
-    if exist "%JAVA_HOME%\bin\java.exe" (
-        "%JAVA_HOME%\bin\java.exe" -version 2>&1 | findstr /C:"version ""25" >nul 2>&1
-        if not errorlevel 1 goto :java_found
-    )
-    set JAVA_HOME=
+if not exist "%TOOLS_DIR%\jdk17\jdk-17.0.12+7\bin\java.exe" (
+    echo        Downloading OpenJDK 17...
+    mkdir "%TOOLS_DIR%\jdk17" 2>nul
+    powershell -Command "Invoke-WebRequest -Uri 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.12_7.zip' -OutFile '%TOOLS_DIR%\jdk17\jdk.zip'"
+    echo        Extracting...
+    powershell -Command "Expand-Archive -Path '%TOOLS_DIR%\jdk17\jdk.zip' -DestinationPath '%TOOLS_DIR%\jdk17' -Force"
+    del "%TOOLS_DIR%\jdk17\jdk.zip"
 )
-
-REM --- 2. Use java on PATH if it is version 25 ---
-where java >nul 2>&1
-if not errorlevel 1 (
-    java -version 2>&1 | findstr /C:"version ""25" >nul 2>&1
-    if not errorlevel 1 (
-        for /f "delims=" %%J in ('where java') do (
-            if not defined JAVA_HOME (
-                for %%H in ("%%~dpJ..") do set JAVA_HOME=%%~fH
-            )
-        )
-        if defined JAVA_HOME goto :java_found
-    )
-)
-
-REM --- 3. Scan common install directories ---
-for %%B in ("C:\Program Files\Eclipse Adoptium" "C:\Program Files\Java" "C:\Program Files\Microsoft" "C:\Program Files\BellSoft" "C:\Program Files\Zulu") do (
-    if not defined JAVA_HOME (
-        for /d %%D in (%%~B\jdk-25* %%~B\temurin-25* %%~B\jdk25*) do (
-            if not defined JAVA_HOME (
-                if exist "%%D\bin\java.exe" set JAVA_HOME=%%D
-            )
-        )
-    )
-)
-if defined JAVA_HOME goto :java_found
-
-REM --- 4. Check our own tools\jdk25 (previously downloaded) ---
-for /d %%D in ("%TOOLS_DIR%\jdk25\jdk-25*" "%TOOLS_DIR%\jdk25\jdk25*") do (
-    if not defined JAVA_HOME (
-        if exist "%%D\bin\java.exe" set JAVA_HOME=%%D
-    )
-)
-if defined JAVA_HOME goto :java_found
-
-REM --- 5. Download Temurin 25 ---
-echo        Java 25 not found. Downloading Temurin 25 LTS...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$a=Invoke-RestMethod 'https://api.adoptium.net/v3/assets/latest/25/hotspot?os=windows&architecture=x64&image_type=jdk';$u=$a[0].binary.package.link;Write-Host('  -> '+$u);Invoke-WebRequest -Uri $u -OutFile '%TOOLS_DIR%\temurin25.zip';Expand-Archive '%TOOLS_DIR%\temurin25.zip' '%TOOLS_DIR%\jdk25' -Force;Remove-Item '%TOOLS_DIR%\temurin25.zip'"
-if errorlevel 1 (
-    echo.
-    echo  ERROR: Could not download Java 25.
-    echo         Install Temurin 25 from https://adoptium.net then re-run.
-    pause & exit /b 1
-)
-for /d %%D in ("%TOOLS_DIR%\jdk25\jdk-25*") do set JAVA_HOME=%%D
-
-:java_found
-if not defined JAVA_HOME (
-    echo  ERROR: Java 25 not found and download failed. Set JAVA_HOME manually.
-    pause & exit /b 1
-)
-
+set JAVA_HOME=%TOOLS_DIR%\jdk17\jdk-17.0.12+7
 set PATH=%JAVA_HOME%\bin;%PATH%
 echo        Found: %JAVA_HOME%
-for /f "tokens=*" %%V in ('"%JAVA_HOME%\bin\java" -version 2^>^&1') do (
-    echo        %%V & goto :java_done
-)
-:java_done
 
 REM ═══════════════════════════════════════════════════════════════
 REM  STEP 2 — Build Paper Server Plugin (Maven)
@@ -135,10 +77,10 @@ REM  STEP 3 — Check Paper 1.21.4 server (once)
 REM ═══════════════════════════════════════════════════════════════
 echo [3/4] Checking Paper 1.21.4 server...
 
-if not exist "%SERVER_DIR%\paper-1.21.4.jar" (
-    powershell -NoProfile -ExecutionPolicy Bypass -File "%TOOLS_DIR%\download_paper.ps1"
+if not exist "%SERVER_DIR%\mohist-1.20.1.jar" (
+    powershell -Command "Invoke-WebRequest -Uri 'https://mohistmc.com/api/v2/projects/mohist/1.20.1/builds/latest/download' -OutFile '%SERVER_DIR%\mohist-1.20.1.jar'"
     if errorlevel 1 (
-        echo  ERROR: Paper server download failed.
+        echo  ERROR: Mohist server download failed.
         pause & exit /b 1
     )
 )
@@ -195,6 +137,6 @@ cd /d "%SERVER_DIR%"
     -XX:+UseG1GC -XX:+ParallelRefProcEnabled ^
     -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions ^
     -XX:+DisableExplicitGC -XX:+AlwaysPreTouch ^
-    -jar paper-1.21.4.jar --nogui
+    -jar mohist-1.20.1.jar --nogui
 
 endlocal

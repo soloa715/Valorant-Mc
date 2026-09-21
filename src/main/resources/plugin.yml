@@ -1,7 +1,7 @@
 name: ValorantMC
 version: ${project.version}
 main: com.valorantmc.ValorantMC
-api-version: 1.21
+api-version: 1.20
 description: Full Valorant experience inside Minecraft
 authors: [ValorantMC Team]
 website: https://github.com/valorantmc
