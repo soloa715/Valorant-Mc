@@ -1,8 +1,5 @@
 package com.valorantmc.mod;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -11,7 +8,6 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 
-@Environment(EnvType.CLIENT)
 public class AdminScreen extends Screen {
 
     private enum Page { MAIN, GIVE, TROLL, MAP_SETUP, GAME_CONTROL }
@@ -311,10 +307,10 @@ public class AdminScreen extends Screen {
     }
 
     private void send(String action) {
-        ClientPlayNetworking.send(new AdminActionPayload(action, selectedUUID));
+        ValorantMCMod.sendToServer(new AdminActionPayload(action, selectedUUID));
     }
 
     private void send(String action, String uuid) {
-        ClientPlayNetworking.send(new AdminActionPayload(action, uuid));
+        ValorantMCMod.sendToServer(new AdminActionPayload(action, uuid));
     }
 }

@@ -1,20 +1,22 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
-public record BuyActionPayload(String weaponName) implements CustomPacketPayload {
+import java.util.function.Supplier;
 
-    public static final CustomPacketPayload.Type<BuyActionPayload> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "buyaction"));
+public record BuyActionPayload(String item) {
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, BuyActionPayload> CODEC = StreamCodec.of(
-            (buf, value) -> buf.writeUtf(value.weaponName(), 32),
-            buf -> new BuyActionPayload(buf.readUtf(32))
-    );
+    public static void encode(BuyActionPayload msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.item);
+    }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public static BuyActionPayload decode(FriendlyByteBuf buf) {
+        return new BuyActionPayload(buf.readUtf(256));
+    }
+
+    public static void handle(BuyActionPayload msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+        NetworkEvent.Context ctx = ctxSupplier.get();
+        ctx.setPacketHandled(true);
+    }
 }

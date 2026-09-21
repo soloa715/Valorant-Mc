@@ -1,20 +1,22 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
-public record HelloPayload(String version) implements CustomPacketPayload {
+import java.util.function.Supplier;
 
-    public static final CustomPacketPayload.Type<HelloPayload> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "hello"));
+public record HelloPayload(String version) {
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, HelloPayload> CODEC = StreamCodec.of(
-            (buf, value) -> buf.writeUtf(value.version(), 32),
-            buf -> new HelloPayload(buf.readUtf(32))
-    );
+    public static void encode(HelloPayload msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.version);
+    }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public static HelloPayload decode(FriendlyByteBuf buf) {
+        return new HelloPayload(buf.readUtf(256));
+    }
+
+    public static void handle(HelloPayload msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+        NetworkEvent.Context ctx = ctxSupplier.get();
+        ctx.setPacketHandled(true);
+    }
 }

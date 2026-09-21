@@ -1,7 +1,5 @@
 package com.valorantmc.mod;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -17,7 +15,6 @@ import net.minecraft.network.chat.Component;
  *   Bottom-right: ammo, credits, minimap
  *   Center      : spike countdown (when spike is planted/defusing)
  */
-@Environment(EnvType.CLIENT)
 public final class ValorantHudRenderer {
 
     // ── Color palette (ARGB) ────────────────────────────────────────────────────
@@ -39,6 +36,10 @@ public final class ValorantHudRenderer {
     private static final int C_CD_OVER  = 0xBB000000;
 
     private ValorantHudRenderer() {}
+
+    private static int clamp(int val, int min, int max) {
+        return Math.max(min, Math.min(max, val));
+    }
 
     // ── Entry point ─────────────────────────────────────────────────────────────
 
@@ -99,216 +100,181 @@ public final class ValorantHudRenderer {
 
     // ── Kill feed (top-right, 4 s TTL) ─────────────────────────────────────────
 
-    private static final long KILLFEED_TTL_MS = 4000L;
+    private static void renderKillFeed(GuiGraphics ctx, Font tr, int W, String killFeed, long kfTime) {
+        if (killFeed == null || killFeed.isEmpty()) return;
+        if (System.currentTimeMillis() - kfTime > 4000) return;
 
-    private static void renderKillFeed(GuiGraphics ctx, Font tr, int W,
-                                       String entry, long shownAt) {
-        if (entry == null || entry.isEmpty()) return;
-        if (System.currentTimeMillis() - shownAt > KILLFEED_TTL_MS) return;
-
-        int tw = tr.width(entry) + 4;
-        int x  = W - tw - 6;
-        int y  = 6;
-        ctx.fill(x - 2, y - 1, x + tw, y + 9, C_BG);
-        ctx.drawString(tr, entry, x, y, C_WHITE, true);
+        int tw = tr.width(killFeed);
+        int x  = W - tw - 10;
+        int y  = 10;
+        ctx.fill(x - 4, y - 2, x + tw + 4, y + 11, C_BG);
+        ctx.drawString(tr, killFeed, x, y, C_WHITE, false);
     }
 
-    // ── Bottom-left: agent / HP / shield / abilities ────────────────────────────
+    // ── Bottom-left HUD: Agent / HP / Shield / Abilities / Ult ────────────────
 
     private static void renderBottomLeft(GuiGraphics ctx, Font tr, int H,
-            int health, int shield,
-            int chargesC, int chargesQ, int chargesE,
-            int cooldownC, int cooldownQ, int cooldownE,
-            int ultProg, int ultMax, String agent) {
+                                         int hp, int shield,
+                                         int chargesC, int chargesQ, int chargesE,
+                                         int cdC, int cdQ, int cdE,
+                                         int ultProg, int ultMax,
+                                         String agent) {
+        int x = 10;
+        int y = H - 55;
 
-        int leftX = 8;
-        int barH  = 6;
-        int hpW   = 100;
-        int shW   = 50;
-        int gap   = 4;
-        int barY  = H - 28;
+        ctx.fill(x - 4, y - 4, x + 190, H - 6, C_BG);
 
-        ctx.fill(leftX - 3, barY - 30, leftX + hpW + gap + shW + 5, barY + barH + 10, C_BG);
-
-        if (!agent.isEmpty()) {
-            ctx.drawString(tr, agent, leftX, barY - 26, C_GREY, false);
+        // Agent name
+        if (agent != null && !agent.isEmpty()) {
+            ctx.drawString(tr, agent.toUpperCase(), x, y - 12, C_WHITE, true);
         }
 
-        int hpFill = (int)(hpW * Math.min(Math.max(health, 0), 100) / 100.0);
-        int hpColor = health > 50 ? C_HP : (health > 25 ? 0xFFFFEB3B : C_ATK);
-        ctx.fill(leftX, barY, leftX + hpW, barY + barH, 0x44FFFFFF);
-        if (hpFill > 0) ctx.fill(leftX, barY, leftX + hpFill, barY + barH, hpColor);
-        ctx.drawString(tr, health + " HP", leftX, barY + barH + 2, C_WHITE, false);
+        // Health bar (100 px wide)
+        int hpWidth = clamp(hp, 0, 100);
+        ctx.fill(x, y, x + 100, y + 8, C_DARK);
+        ctx.fill(x, y, x + hpWidth, y + 8, C_HP);
+        ctx.drawString(tr, String.valueOf(hp), x + 104, y, C_WHITE, false);
 
-        int shX    = leftX + hpW + gap;
-        int shFill = (int)(shW * Math.min(shield, 50) / 50.0);
-        ctx.fill(shX, barY, shX + shW, barY + barH, 0x44FFFFFF);
-        if (shFill > 0) ctx.fill(shX, barY, shX + shFill, barY + barH, C_SHIELD);
-        ctx.drawString(tr, shield + " SH", shX, barY + barH + 2, C_SHIELD, false);
+        // Shield bar (50 px max shield, 100 px width scale = 2 px per shield point)
+        int shY = y + 11;
+        int shWidth = clamp(shield * 2, 0, 100);
+        ctx.fill(x, shY, x + 100, shY + 6, C_DARK);
+        ctx.fill(x, shY, x + shWidth, shY + 6, C_SHIELD);
+        ctx.drawString(tr, String.valueOf(shield), x + 104, shY - 1, C_SHIELD, false);
 
-        int abilY  = barY - 18;
-        int slotW  = 18;
-        int slotH  = 14;
-        int slotGap= 3;
-        String[] keys     = {"C", "Q", "E"};
-        int[]    charges  = {chargesC, chargesQ, chargesE};
-        int[]    cooldowns= {cooldownC, cooldownQ, cooldownE};
+        // Ability & Ult row
+        int slotY  = shY + 10;
+        int slotW  = 22;
+        int slotH  = 20;
+        int gap    = 4;
 
-        for (int i = 0; i < 3; i++) {
-            int sx = leftX + i * (slotW + slotGap);
-            boolean ready = charges[i] > 0 && cooldowns[i] == 0;
-            boolean onCd  = cooldowns[i] > 0;
-            int borderCol = ready ? C_ABLE : C_DARK;
+        renderAbilitySlot(ctx, tr, x,                       slotY, slotW, slotH, "C", chargesC, cdC);
+        renderAbilitySlot(ctx, tr, x + slotW + gap,         slotY, slotW, slotH, "Q", chargesQ, cdQ);
+        renderAbilitySlot(ctx, tr, x + (slotW + gap) * 2,   slotY, slotW, slotH, "E", chargesE, cdE);
+        renderUltSlot    (ctx, tr, x + (slotW + gap) * 3,   slotY, slotW + 8, slotH, ultProg, ultMax);
+    }
 
-            ctx.fill(sx, abilY, sx + slotW, abilY + slotH, 0xAA000000);
-            border(ctx, sx, abilY, slotW, slotH, borderCol);
-            ctx.drawCenteredString(tr, keys[i], sx + slotW / 2, abilY + 3,
-                    ready ? C_ABLE : C_DARK);
-            if (onCd) {
-                ctx.fill(sx + 1, abilY + 1, sx + slotW - 1, abilY + slotH - 1, C_CD_OVER);
-                String cdText = String.format("%.1f", cooldowns[i] / 10.0f);
-                ctx.drawCenteredString(tr, cdText, sx + slotW / 2, abilY + 4, C_WHITE);
-            } else if (charges[i] > 1) {
-                ctx.drawString(tr, String.valueOf(charges[i]),
-                        sx + slotW - 6, abilY + slotH - 7, C_WHITE, false);
-            }
-        }
+    private static void renderAbilitySlot(GuiGraphics ctx, Font tr,
+                                           int x, int y, int w, int h,
+                                           String key, int charges, int cdSecs) {
+        boolean ready = charges > 0 && cdSecs <= 0;
+        int borderCol = ready ? C_ABLE : C_DARK;
 
-        int ultX    = leftX + 3 * (slotW + slotGap) + 6;
-        int ultSlotW= slotW + 6;
-        boolean ultReady = ultMax > 0 && ultProg >= ultMax;
-        int ultBorder = ultReady ? C_ULT_RDY : C_ULT_PRG;
-        ctx.fill(ultX, abilY, ultX + ultSlotW, abilY + slotH, 0xAA000000);
-        border(ctx, ultX, abilY, ultSlotW, slotH, ultBorder);
-        ctx.drawCenteredString(tr, "X", ultX + ultSlotW / 2, abilY + 3, ultBorder);
-        if (ultMax > 0) {
-            String label = ultReady ? "RDY" : ultProg + "/" + ultMax;
-            ctx.drawCenteredString(tr, label, ultX + ultSlotW / 2, abilY + slotH + 2, ultBorder);
+        ctx.fill(x, y, x + w, y + h, C_BG);
+        ctx.fill(x, y, x + w, y + 1, borderCol);
+        ctx.fill(x, y + h - 1, x + w, y + h, borderCol);
+        ctx.fill(x, y, x + 1, y + h, borderCol);
+        ctx.fill(x + w - 1, y, x + w, y + h, borderCol);
+
+        ctx.drawString(tr, key, x + (w - tr.width(key)) / 2, y + 2, ready ? C_WHITE : C_GREY, false);
+
+        if (cdSecs > 0) {
+            ctx.fill(x + 1, y + 1, x + w - 1, y + h - 1, C_CD_OVER);
+            String cdStr = String.valueOf(cdSecs);
+            ctx.drawString(tr, cdStr, x + (w - tr.width(cdStr)) / 2, y + 6, C_WHITE, false);
+        } else {
+            String chStr = charges > 0 ? "•".repeat(charges) : "—";
+            ctx.drawString(tr, chStr, x + (w - tr.width(chStr)) / 2, y + 10, ready ? C_ABLE : C_GREY, false);
         }
     }
 
-    // ── Bottom-right: ammo + credits ────────────────────────────────────────────
+    private static void renderUltSlot(GuiGraphics ctx, Font tr,
+                                       int x, int y, int w, int h,
+                                       int ultProg, int ultMax) {
+        boolean ready = ultMax > 0 && ultProg >= ultMax;
+        int color = ready ? C_ULT_RDY : C_ULT_PRG;
 
-    private static void renderBottomRight(GuiGraphics ctx, Font tr,
-                                          int W, int H, int ammo, int maxAmmo,
-                                          int reserve, int credits) {
-        int rightEdge = W - 8;
-        int ammoY     = H - 28;
+        ctx.fill(x, y, x + w, y + h, C_BG);
+        ctx.fill(x, y, x + w, y + 1, color);
+        ctx.fill(x, y + h - 1, x + w, y + h, color);
+        ctx.fill(x, y, x + 1, y + h, color);
+        ctx.fill(x + w - 1, y, x + w, y + h, color);
 
-        String cur  = String.valueOf(ammo);
-        String sep  = " / ";
-        String max  = String.valueOf(maxAmmo);
-        String res  = "  +" + reserve;
-        int totalW  = tr.width(cur + sep + max + res) + 4;
-        int ammoX   = rightEdge - totalW;
+        if (ready) {
+            ctx.drawString(tr, "X", x + (w - tr.width("X")) / 2, y + 2, C_ULT_RDY, true);
+            ctx.drawString(tr, "READY", x + (w - tr.width("READY")) / 2, y + 10, C_ULT_RDY, false);
+        } else {
+            ctx.drawString(tr, "X", x + (w - tr.width("X")) / 2, y + 2, C_GREY, false);
+            String pStr = ultProg + "/" + ultMax;
+            ctx.drawString(tr, pStr, x + (w - tr.width(pStr)) / 2, y + 10, C_GREY, false);
+        }
+    }
 
-        ctx.fill(ammoX - 3, ammoY - 2, rightEdge + 1, ammoY + 20, C_BG);
-        int cx = ammoX;
-        ctx.drawString(tr, cur, cx, ammoY, C_WHITE, true);
-        cx += tr.width(cur);
-        ctx.drawString(tr, sep, cx, ammoY, C_GREY, false);
-        cx += tr.width(sep);
-        ctx.drawString(tr, max, cx, ammoY, C_GREY, false);
-        cx += tr.width(max);
-        ctx.drawString(tr, res, cx, ammoY, C_DARK, false);
+    // ── Bottom-right HUD: Ammo & Credits ───────────────────────────────────────
 
+    private static void renderBottomRight(GuiGraphics ctx, Font tr, int W, int H,
+                                          int ammo, int maxAmmo, int reserve, int credits) {
+        int w = 110;
+        int h = 40;
+        int x = W - w - 10;
+        int y = H - h - 10;
+
+        ctx.fill(x, y, x + w, y + h, C_BG);
+
+        // Ammo string
+        String ammoStr = (maxAmmo > 0) ? (ammo + " / " + reserve) : "—";
+        int ammoColor = (ammo == 0 && maxAmmo > 0) ? C_ATK : C_WHITE;
+        ctx.drawString(tr, ammoStr, x + 8, y + 6, ammoColor, false);
+
+        // Credits string
         String credStr = "¢ " + credits;
-        int credW = tr.width(credStr);
-        ctx.drawString(tr, credStr, rightEdge - credW, ammoY + 12, C_CREDITS, false);
+        ctx.drawString(tr, credStr, x + 8, y + 22, C_CREDITS, false);
     }
 
-    // ── Minimap / radar (above ammo, bottom-right) ──────────────────────────────
-
-    private static final int MAP_SIZE  = 80;
-    private static final float SCALE   = 2.0f;
+    // ── Minimap (radar) ─────────────────────────────────────────────────────────
 
     private static void renderMinimap(GuiGraphics ctx, int W, int H, String radarData) {
         if (radarData == null || radarData.isEmpty()) return;
 
-        int mapX = W - MAP_SIZE - 8;
-        int mapY = H - 28 - MAP_SIZE - 4;
+        int size = 64;
+        int x    = W - size - 10;
+        int y    = 10;
 
-        ctx.fill(mapX - 1, mapY - 1, mapX + MAP_SIZE + 1, mapY + MAP_SIZE + 1, 0xFF222222);
-        ctx.fill(mapX, mapY, mapX + MAP_SIZE, mapY + MAP_SIZE, 0x88000000);
+        ctx.fill(x, y, x + size, y + size, 0xBB000000);
+        ctx.fill(x, y, x + size, y + 1, C_GREY);
+        ctx.fill(x, y + size - 1, x + size, y + size, C_GREY);
+        ctx.fill(x, y, x + 1, y + size, C_GREY);
+        ctx.fill(x + size - 1, y, x + size, y + size, C_GREY);
 
-        String[] parts = radarData.split("\\|", 2);
-        if (parts.length < 1) return;
+        int cx = x + size / 2;
+        int cy = y + size / 2;
 
-        String[] self = parts[0].split(":");
-        if (self.length < 3) return;
-        float selfX, selfZ, selfYaw;
-        try {
-            selfX   = Float.parseFloat(self[0]);
-            selfZ   = Float.parseFloat(self[1]);
-            selfYaw = Float.parseFloat(self[2]);
-        } catch (NumberFormatException e) {
-            return;
-        }
+        ctx.fill(cx - 2, cy - 2, cx + 2, cy + 2, C_WHITE);
 
-        int midX = mapX + MAP_SIZE / 2;
-        int midY = mapY + MAP_SIZE / 2;
-        ctx.fill(midX - 2, midY - 2, midX + 2, midY + 2, C_WHITE);
-
-        if (parts.length < 2 || parts[1].isEmpty()) return;
-
-        for (String entry : parts[1].split(",")) {
-            String[] ef = entry.split(":");
-            if (ef.length < 4) continue;
+        String[] dots = radarData.split(";");
+        for (String dot : dots) {
+            String[] p = dot.split(",");
+            if (p.length < 3) continue;
             try {
-                float ex = Float.parseFloat(ef[1]);
-                float ez = Float.parseFloat(ef[2]);
-                boolean ally = "A".equals(ef[3]);
+                int dx       = Integer.parseInt(p[0]);
+                int dy       = Integer.parseInt(p[1]);
+                boolean enemy = p[2].equals("1");
 
-                float dx = ex - selfX;
-                float dz = ez - selfZ;
-                double rad = Math.toRadians(-selfYaw);
-                float rotX = (float)(dx * Math.cos(rad) - dz * Math.sin(rad));
-                float rotZ = (float)(dx * Math.sin(rad) + dz * Math.cos(rad));
+                int px = clamp(cx + dx, x + 2, x + size - 3);
+                int py = clamp(cy + dy, y + 2, y + size - 3);
 
-                int px = midX + Math.round(rotX / SCALE);
-                int py = midY + Math.round(rotZ / SCALE);
-
-                px = Math.max(mapX + 2, Math.min(mapX + MAP_SIZE - 3, px));
-                py = Math.max(mapY + 2, Math.min(mapY + MAP_SIZE - 3, py));
-
-                int dotColor = ally ? C_ALLY : C_ENEMY;
-                ctx.fill(px - 2, py - 2, px + 2, py + 2, dotColor);
-            } catch (NumberFormatException ignored) {}
+                int color = enemy ? C_ENEMY : C_ALLY;
+                ctx.fill(px - 1, py - 1, px + 2, py + 2, color);
+            } catch (Exception ignored) {}
         }
     }
 
-    // ── Spike indicator (screen center) ────────────────────────────────────────
+    // ── Spike indicator (center) ────────────────────────────────────────────────
 
-    private static void renderSpike(GuiGraphics ctx, Font tr,
-                                    int W, int H, int spikeState, int spikeTicks) {
-        int totalTicks = spikeState == 2 ? 120 : 900;
-        float progress = Math.max(0f, Math.min(1f, (float) spikeTicks / totalTicks));
+    private static void renderSpike(GuiGraphics ctx, Font tr, int W, int H,
+                                    int spikeState, int spikeTicks) {
+        int cx = W / 2;
+        int y  = 26;
 
-        String label = spikeState == 2 ? "DEFUSING" : "SPIKE PLANTED";
-        int seconds = spikeTicks / 20;
-        String timer = seconds + "s";
+        float secs = spikeTicks / 20.0f;
+        String label = (spikeState == 1)
+                ? String.format("SPIKE PLANTED  %.1fs", secs)
+                : String.format("DEFUSING  %.1fs", secs);
 
-        int bw = 140;
-        int bh = 10;
-        int bx = (W - bw) / 2;
-        int by = H / 2 + 20;
+        int tw = tr.width(label);
+        int color = (spikeState == 1) ? C_SPIKE : C_SHIELD;
 
-        ctx.fill(bx - 4, by - 20, bx + bw + 4, by + bh + 4, C_BG);
-        ctx.drawCenteredString(tr, label, W / 2, by - 16, C_SPIKE);
-        ctx.drawCenteredString(tr, timer, W / 2, by - 6, C_WHITE);
-
-        ctx.fill(bx, by, bx + bw, by + bh, 0x44FFFFFF);
-        int filled = (int)(bw * progress);
-        if (filled > 0) ctx.fill(bx, by, bx + filled, by + bh,
-                spikeState == 2 ? C_SHIELD : C_SPIKE);
-    }
-
-    // ── Utilities ────────────────────────────────────────────────────────────────
-
-    private static void border(GuiGraphics ctx, int x, int y, int w, int h, int color) {
-        ctx.fill(x,         y,         x + w,     y + 1,     color);
-        ctx.fill(x,         y + h - 1, x + w,     y + h,     color);
-        ctx.fill(x,         y,         x + 1,     y + h,     color);
-        ctx.fill(x + w - 1, y,         x + w,     y + h,     color);
+        ctx.fill(cx - tw / 2 - 6, y - 2, cx + tw / 2 + 6, y + 12, C_BG);
+        ctx.drawString(tr, label, cx - tw / 2, y, color, true);
     }
 }

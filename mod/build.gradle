@@ -1,38 +1,56 @@
-plugins {
-    id 'fabric-loom' version "${loom_version}"
-    id 'java'
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.0.+', changing: true
+    }
 }
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
 
-version   = project.mod_version
-group     = project.maven_group
-base { archivesName = project.archives_base_name }
+version = '1.0.0'
+group = 'com.valorantmc.mod'
+archivesBaseName = 'valorantmc-mod'
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-    withSourcesJar()
-}
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings  loom.officialMojangMappings()
-
-    // Fabric loader + API
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-}
-
-processResources {
-    inputs.property 'version', project.version
-    filesMatching('fabric.mod.json') {
-        expand 'version': project.version
+minecraft {
+    mappings channel: 'official', version: '1.20.1'
+    
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'forge.enabledGameTestNamespaces', 'valorantmc'
+            mods {
+                valorantmc {
+                    source sourceSets.main
+                }
+            }
+        }
     }
 }
 
-jar {
-    from('LICENSE') { rename { "${it}_${project.archives_base_name}" } }
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
 }
+
+jar {
+    manifest {
+        attributes([
+            "Specification-Title": "valorantmc",
+            "Specification-Vendor": "valorantmc",
+            "Specification-Version": "1", // We are version 1 of ourselves
+            "Implementation-Title": project.name,
+            "Implementation-Version": project.jar.archiveVersion,
+            "Implementation-Vendor" :"valorantmc",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+jar.finalizedBy('reobfJar')

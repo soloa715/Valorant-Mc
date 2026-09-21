@@ -1,20 +1,22 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
-public record AgentChoicePayload(String agentName) implements CustomPacketPayload {
+import java.util.function.Supplier;
 
-    public static final CustomPacketPayload.Type<AgentChoicePayload> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "agentchoice"));
+public record AgentChoicePayload(String agentName) {
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, AgentChoicePayload> CODEC = StreamCodec.of(
-            (buf, value) -> buf.writeUtf(value.agentName()),
-            buf -> new AgentChoicePayload(buf.readUtf())
-    );
+    public static void encode(AgentChoicePayload msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.agentName);
+    }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public static AgentChoicePayload decode(FriendlyByteBuf buf) {
+        return new AgentChoicePayload(buf.readUtf(256));
+    }
+
+    public static void handle(AgentChoicePayload msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+        NetworkEvent.Context ctx = ctxSupplier.get();
+        ctx.setPacketHandled(true);
+    }
 }

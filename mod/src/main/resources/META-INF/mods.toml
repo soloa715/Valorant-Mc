@@ -1,0 +1,13 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All rights reserved"
+
+[[mods]]
+modId="valorantmc"
+version="1.0.0"
+displayName="ValorantMC Companion Mod"
+authors="solo"
+description='''
+Companion mod for ValorantMC to handle custom HUD and keybinds.
+'''
+displayTest="IGNORE_SERVER_VERSION"

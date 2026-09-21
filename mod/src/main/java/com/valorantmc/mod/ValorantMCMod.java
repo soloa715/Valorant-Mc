@@ -1,329 +1,230 @@
 package com.valorantmc.mod;
 
-import com.valorantmc.mod.server.*;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.core.Holder;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.level.GameType;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.IExtensionPoint;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
+import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.UUID;
+import java.util.Optional;
 
-/**
- * Shared entrypoint — runs on both the Fabric server and (alongside the client
- * entrypoint) on the Fabric client.
- */
-public class ValorantMCMod implements ModInitializer {
+@Mod(ValorantMCMod.MOD_ID)
+public class ValorantMCMod {
 
     public static final String MOD_ID = "valorantmc";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    @Override
-    public void onInitialize() {
-        // ── Payload types ──────────────────────────────────────────────────────
-        PayloadTypeRegistry.playC2S().register(HelloPayload.TYPE,        HelloPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(BuyActionPayload.TYPE,   BuyActionPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(AgentChoicePayload.TYPE, AgentChoicePayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(MapVotePayload.TYPE,     MapVotePayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(AdminActionPayload.TYPE, AdminActionPayload.CODEC);
+    private static final String PROTOCOL_VERSION = "1";
 
-        PayloadTypeRegistry.playS2C().register(HudPayload.TYPE,         HudPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(BuyMenuPayload.TYPE,     BuyMenuPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(RadarPayload.TYPE,       RadarPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(AgentSelectPayload.TYPE, AgentSelectPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(MapSelectPayload.TYPE,   MapSelectPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(AdminSyncPayload.TYPE,    AdminSyncPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(ScoreboardPayload.TYPE,  ScoreboardPayload.CODEC);
-
-        // ── Server-side game manager ───────────────────────────────────────────
-        ValorantServer.init();
-
-        // ── Server tick ───────────────────────────────────────────────────────
-        ServerTickEvents.END_SERVER_TICK.register(server ->
-                ValorantServer.getInstance().tick(server));
-
-        // ── Player connection events ───────────────────────────────────────────
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-                ValorantServer.getInstance().onPlayerJoin(handler.player));
-
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                ValorantServer.getInstance().onPlayerLeave(handler.player));
-
-        // ── C → S packet receivers ─────────────────────────────────────────────
-        ServerPlayNetworking.registerGlobalReceiver(HelloPayload.TYPE, (payload, context) ->
-                context.server().execute(() ->
-                        ValorantServer.getInstance().onHello(context.player(), payload)));
-
-        ServerPlayNetworking.registerGlobalReceiver(BuyActionPayload.TYPE, (payload, context) ->
-                context.server().execute(() ->
-                        ValorantServer.getInstance().onBuyAction(context.player(), payload)));
-
-        ServerPlayNetworking.registerGlobalReceiver(AgentChoicePayload.TYPE, (payload, context) ->
-                context.server().execute(() -> {
-                    var g = ValorantServer.getInstance().getGame(context.player().getUUID());
-                    if (g != null) g.selectAgent(context.player(), payload.agentName());
-                }));
-
-        ServerPlayNetworking.registerGlobalReceiver(MapVotePayload.TYPE, (payload, context) ->
-                context.server().execute(() -> {
-                    var g = ValorantServer.getInstance().getGame(context.player().getUUID());
-                    if (g != null) MapManager.getInstance()
-                            .vote(context.player().getUUID(), payload.mapName());
-                }));
-
-        ServerPlayNetworking.registerGlobalReceiver(AdminActionPayload.TYPE, (payload, context) ->
-                context.server().execute(() ->
-                        handleAdminAction(context.player(), payload, context.server())));
-
-        // ── Commands ──────────────────────────────────────────────────────────
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                ValorantCommands.register(dispatcher));
-
-        // ── Weapon use (right-click in air or on a block) ─────────────────────
-        UseItemCallback.EVENT.register((player, world, hand) -> {
-            if (world.isClientSide()) return InteractionResult.PASS;
-            if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
-            return ValorantServer.getInstance().onItemUse(sp, world, hand);
-        });
-        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-            if (world.isClientSide()) return InteractionResult.PASS;
-            if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
-            return ValorantServer.getInstance().onItemUse(sp, world, hand);
-        });
-        AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
-            if (world.isClientSide()) return InteractionResult.PASS;
-            if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
-            return ValorantServer.getInstance().onItemUse(sp, world, hand);
-        });
-
-        // ── Melee attack (left-click) ──────────────────────────────────────────
-        AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
-            if (world.isClientSide()) return InteractionResult.PASS;
-            if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
-            return ValorantServer.getInstance().onAttack(sp, world, entity);
-        });
-
-        // ── Cancel vanilla damage for in-game players ──────────────────────────
-        ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
-            if (!(entity instanceof ServerPlayer sp)) return true;
-            return ValorantServer.getInstance().allowDamage(sp, source);
-        });
-
-        LOGGER.info("ValorantMC loaded — Fabric server+client mod ready.");
+    private static SimpleChannel createChannel(String name) {
+        return NetworkRegistry.newSimpleChannel(
+                new ResourceLocation(MOD_ID, name),
+                () -> PROTOCOL_VERSION,
+                v -> true,
+                v -> true
+        );
     }
 
-    // ── Admin action dispatcher ───────────────────────────────────────────────
+    public static final SimpleChannel CH_HELLO        = createChannel("hello");
+    public static final SimpleChannel CH_BUY_ACTION   = createChannel("buyaction");
+    public static final SimpleChannel CH_AGENT_CHOICE = createChannel("agentchoice");
+    public static final SimpleChannel CH_MAP_VOTE     = createChannel("mapvote");
+    public static final SimpleChannel CH_ADMIN_ACTION  = createChannel("adminaction");
 
-    private static void handleAdminAction(ServerPlayer admin, AdminActionPayload p,
-                                          net.minecraft.server.MinecraftServer server) {
-        if (!admin.hasPermissions(2)) {
-            admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cNo permission."));
-            return;
+    public static final SimpleChannel CH_HUD          = createChannel("hud");
+    public static final SimpleChannel CH_BUY_MENU     = createChannel("buymenu");
+    public static final SimpleChannel CH_RADAR        = createChannel("radar");
+    public static final SimpleChannel CH_AGENT_SELECT = createChannel("agentselect");
+    public static final SimpleChannel CH_MAP_SELECT   = createChannel("mapselect");
+    public static final SimpleChannel CH_ADMIN_SYNC   = createChannel("adminsync");
+    public static final SimpleChannel CH_SCOREBOARD   = createChannel("scoreboard");
+
+    public ValorantMCMod() {
+        ModLoadingContext.get().registerExtensionPoint(
+                IExtensionPoint.DisplayTest.class,
+                () -> new IExtensionPoint.DisplayTest(
+                        () -> IExtensionPoint.DisplayTest.IGNORESERVERONLY,
+                        (remoteVersion, isServer) -> true
+                )
+        );
+
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        // C2S Packets
+        CH_HELLO.registerMessage(0, HelloPayload.class, HelloPayload::encode, HelloPayload::decode, HelloPayload::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CH_BUY_ACTION.registerMessage(0, BuyActionPayload.class, BuyActionPayload::encode, BuyActionPayload::decode, BuyActionPayload::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CH_AGENT_CHOICE.registerMessage(0, AgentChoicePayload.class, AgentChoicePayload::encode, AgentChoicePayload::decode, AgentChoicePayload::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CH_MAP_VOTE.registerMessage(0, MapVotePayload.class, MapVotePayload::encode, MapVotePayload::decode, MapVotePayload::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CH_ADMIN_ACTION.registerMessage(0, AdminActionPayload.class, AdminActionPayload::encode, AdminActionPayload::decode, AdminActionPayload::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        // S2C Packets
+        CH_HUD.registerMessage(0, HudPayload.class, HudPayload::encode, HudPayload::decode, HudPayload::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CH_BUY_MENU.registerMessage(0, BuyMenuPayload.class, BuyMenuPayload::encode, BuyMenuPayload::decode, BuyMenuPayload::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CH_RADAR.registerMessage(0, RadarPayload.class, RadarPayload::encode, RadarPayload::decode, RadarPayload::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CH_AGENT_SELECT.registerMessage(0, AgentSelectPayload.class, AgentSelectPayload::encode, AgentSelectPayload::decode, AgentSelectPayload::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CH_MAP_SELECT.registerMessage(0, MapSelectPayload.class, MapSelectPayload::encode, MapSelectPayload::decode, MapSelectPayload::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CH_ADMIN_SYNC.registerMessage(0, AdminSyncPayload.class, AdminSyncPayload::encode, AdminSyncPayload::decode, AdminSyncPayload::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CH_SCOREBOARD.registerMessage(0, ScoreboardPayload.class, ScoreboardPayload::encode, ScoreboardPayload::decode, ScoreboardPayload::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        if (FMLEnvironment.dist.isClient()) {
+            modEventBus.addListener(this::clientSetup);
+            modEventBus.addListener(this::registerKeyMappings);
+            modEventBus.addListener(this::registerGuiOverlays);
+            MinecraftForge.EVENT_BUS.register(this);
         }
+    }
 
-        String action = p.action();
-        String targetUUID = p.targetUUID();
-        ValorantServer vs = ValorantServer.getInstance();
+    public static void sendToServer(Object message) {
+        if (message instanceof HelloPayload msg) CH_HELLO.sendToServer(msg);
+        else if (message instanceof BuyActionPayload msg) CH_BUY_ACTION.sendToServer(msg);
+        else if (message instanceof AgentChoicePayload msg) CH_AGENT_CHOICE.sendToServer(msg);
+        else if (message instanceof MapVotePayload msg) CH_MAP_VOTE.sendToServer(msg);
+        else if (message instanceof AdminActionPayload msg) CH_ADMIN_ACTION.sendToServer(msg);
+    }
 
-        // Resolve target player (may be null for game-wide actions)
-        ValorantGame game = vs.getGame(admin.getUUID());
-        ServerPlayer target = null;
-        if (targetUUID != null && !targetUUID.isEmpty() && !targetUUID.equals("_")) {
-            try { target = server.getPlayerList().getPlayer(UUID.fromString(targetUUID)); }
-            catch (Exception ignored) {}
-        }
-        if (game == null && !action.startsWith("spawn_") && !action.equals("end_game")) {
-            // Try to find the game by target
-            if (target != null) game = vs.getGame(target.getUUID());
-        }
+    private void clientSetup(final FMLClientSetupEvent event) {
+        LOGGER.info("ValorantMC Forge Client initialized!");
+    }
 
-        final ValorantGame g = game;
-        final ServerPlayer t = target;
+    private static final String CATEGORY = "key.categories.valorantmc";
+    public static KeyMapping KEY_SHOP;
+    public static KeyMapping KEY_RELOAD;
+    public static KeyMapping KEY_AGENT;
+    public static KeyMapping KEY_DROPSPIKE;
+    public static KeyMapping KEY_WALK;
+    public static KeyMapping KEY_ABILITY_C;
+    public static KeyMapping KEY_ABILITY_Q;
+    public static KeyMapping KEY_ABILITY_E;
+    public static KeyMapping KEY_ULT;
+    public static KeyMapping KEY_ADMIN;
+    public static KeyMapping KEY_MAP;
+    public static KeyMapping KEY_SCOREBOARD;
 
-        // ── Give credits ──────────────────────────────────────────────────────
-        if (action.startsWith("give_credits_") && t != null && g != null) {
-            String amt = action.substring("give_credits_".length());
-            int credits = amt.equals("max") ? 9000 : Integer.parseInt(amt);
-            g.getEconomy().addCredits(t.getUUID(), credits);
-            t.sendSystemMessage(net.minecraft.network.chat.Component.literal("§a+" + credits + " credits from admin"));
-            return;
-        }
+    private void registerKeyMappings(RegisterKeyMappingsEvent event) {
+        KEY_SHOP      = new KeyMapping("key.valorantmc.shop",      InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, CATEGORY);
+        KEY_RELOAD    = new KeyMapping("key.valorantmc.reload",    InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
+        KEY_AGENT     = new KeyMapping("key.valorantmc.agent",     InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, CATEGORY);
+        KEY_DROPSPIKE = new KeyMapping("key.valorantmc.dropspike", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, CATEGORY);
+        KEY_WALK      = new KeyMapping("key.valorantmc.walk",      InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Y, CATEGORY);
+        KEY_ABILITY_C = new KeyMapping("key.valorantmc.ability_c", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F, CATEGORY);
+        KEY_ABILITY_Q = new KeyMapping("key.valorantmc.ability_q", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, CATEGORY);
+        KEY_ABILITY_E = new KeyMapping("key.valorantmc.ability_e", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY);
+        KEY_ULT       = new KeyMapping("key.valorantmc.ult",       InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, CATEGORY);
+        KEY_ADMIN     = new KeyMapping("key.valorantmc.admin",     InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_KP_0, CATEGORY);
+        KEY_MAP       = new KeyMapping("key.valorantmc.map",       InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_M, CATEGORY);
+        KEY_SCOREBOARD= new KeyMapping("key.valorantmc.scoreboard",InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_TAB, CATEGORY);
 
-        // ── Give weapon ───────────────────────────────────────────────────────
-        if (action.startsWith("give_weapon_") && t != null && g != null) {
-            String wepName = action.substring("give_weapon_".length());
-            for (WeaponType wt : WeaponType.values()) {
-                if (wt.getDisplayName().equalsIgnoreCase(wepName)) {
-                    g.giveWeapon(t, new Weapon(wt));
-                    t.sendSystemMessage(net.minecraft.network.chat.Component.literal("§aGot §f" + wt.getDisplayName()));
-                    return;
-                }
+        event.register(KEY_SHOP);
+        event.register(KEY_RELOAD);
+        event.register(KEY_AGENT);
+        event.register(KEY_DROPSPIKE);
+        event.register(KEY_WALK);
+        event.register(KEY_ABILITY_C);
+        event.register(KEY_ABILITY_Q);
+        event.register(KEY_ABILITY_E);
+        event.register(KEY_ULT);
+        event.register(KEY_ADMIN);
+        event.register(KEY_MAP);
+        event.register(KEY_SCOREBOARD);
+    }
+
+    private void registerGuiOverlays(RegisterGuiOverlaysEvent event) {
+        event.registerAboveAll("valorant_hud", (gui, guiGraphics, partialTick, width, height) -> {
+            if (ValorantHudState.active) {
+                ValorantHudRenderer.render(guiGraphics, width, height);
+                CrosshairRenderer.render(guiGraphics, width, height);
             }
-            return;
+        });
+    }
+
+    private int helloTick = 0;
+
+    @SubscribeEvent
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null) return;
+
+        helloTick++;
+        // Periodic heartbeat to ensure server always knows mod is present
+        if (helloTick % 40 == 0) {
+            sendToServer(new HelloPayload("1.0.0"));
         }
 
-        // ── Give ult ─────────────────────────────────────────────────────────
-        if (action.equals("give_ult_1") || action.equals("give_ult_full")) {
-            admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§7Ult grant via admin not yet hooked to agent system."));
-            return;
+        if (client.screen != null) return;
+
+        if (KEY_SHOP != null && KEY_SHOP.consumeClick()) {
+            client.execute(() -> client.setScreen(new BuyScreen(null, ValorantHudState.credits)));
         }
 
-        // ── Give shield ───────────────────────────────────────────────────────
-        if (action.equals("give_shield_light") && t != null && g != null) {
-            g.adminSetShield(t.getUUID(), 25);
-            t.sendSystemMessage(net.minecraft.network.chat.Component.literal("§9Light Shield granted by admin."));
-            return;
-        }
-        if (action.equals("give_shield_heavy") && t != null && g != null) {
-            g.adminSetShield(t.getUUID(), 50);
-            t.sendSystemMessage(net.minecraft.network.chat.Component.literal("§9Heavy Shield granted by admin."));
-            return;
+        if (KEY_AGENT != null && KEY_AGENT.consumeClick()) {
+            List<String> list = List.of(
+                "Jett", "Reyna", "Raze", "Phoenix", "Neon",
+                "Sova", "Skye", "Breach", "Fade", "Gekko",
+                "Omen", "Viper", "Brimstone",
+                "Sage", "Cypher", "Killjoy", "Chamber"
+            );
+            client.execute(() -> client.setScreen(new AgentSelectScreen(list, ValorantHudState.agentName)));
         }
 
-        // ── Give ammo ─────────────────────────────────────────────────────────
-        if (action.equals("give_ammo") && t != null && g != null) {
-            g.adminRefillAllAmmo(server); // refills all, simpler
-            return;
+        checkKey(client, KEY_RELOAD,    "vreload");
+        checkKey(client, KEY_DROPSPIKE, "vdropspike");
+        checkKey(client, KEY_WALK,      "vwalk");
+        checkKey(client, KEY_ABILITY_C, "vuse C");
+        checkKey(client, KEY_ABILITY_Q, "vuse Q");
+        checkKey(client, KEY_ABILITY_E, "vuse E");
+        checkKey(client, KEY_ULT,       "vuse X");
+        checkKey(client, KEY_ADMIN,     "vadmin");
+
+        if (KEY_SCOREBOARD != null && KEY_SCOREBOARD.consumeClick()) {
+            boolean isSpectator = client.player.isSpectator();
+            client.player.connection.sendCommand(isSpectator ? "vspec" : "vscoreboard");
         }
 
-        // ── Troll: kill ───────────────────────────────────────────────────────
-        if (action.equals("kill") && t != null && g != null) {
-            g.adminKill(t); return;
-        }
-
-        // ── Troll: freeze / unfreeze ──────────────────────────────────────────
-        if (action.equals("freeze") && t != null) {
-            t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 6000, 255, false, false));
-            return;
-        }
-        if (action.equals("unfreeze") && t != null) {
-            t.removeEffect(MobEffects.MOVEMENT_SLOWDOWN); return;
-        }
-
-        // ── Troll: blind ──────────────────────────────────────────────────────
-        if (action.equals("blind") && t != null) {
-            t.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 0, false, false)); return;
-        }
-
-        // ── Troll: nausea ─────────────────────────────────────────────────────
-        if (action.equals("nausea") && t != null) {
-            t.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 200, 1, false, false)); return;
-        }
-
-        // ── Troll: launch ─────────────────────────────────────────────────────
-        if (action.equals("launch") && t != null) {
-            t.setDeltaMovement(t.getDeltaMovement().add(0, 2.5, 0)); return;
-        }
-
-        // ── Troll: strip ─────────────────────────────────────────────────────
-        if (action.equals("strip") && t != null) {
-            t.getInventory().clearContent(); return;
-        }
-
-        // ── Troll: credits max / zero ─────────────────────────────────────────
-        if (action.equals("credits_max") && t != null && g != null) {
-            g.getEconomy().setCredits(t.getUUID(), 9000); return;
-        }
-        if (action.equals("credits_zero") && t != null && g != null) {
-            g.getEconomy().setCredits(t.getUUID(), 0); return;
-        }
-
-        // ── Troll: ignite ─────────────────────────────────────────────────────
-        if (action.equals("ignite") && t != null) {
-            t.igniteForSeconds(10); return;
-        }
-
-        // ── Troll: TP ─────────────────────────────────────────────────────────
-        if (action.equals("tp_random") && t != null) {
-            t.teleportTo(t.getX() + (Math.random() * 40 - 20), t.getY(), t.getZ() + (Math.random() * 40 - 20));
-            return;
-        }
-        if (action.equals("tp_to_me") && t != null) {
-            t.teleportTo(admin.getX(), admin.getY(), admin.getZ()); return;
-        }
-        if (action.equals("tp_to_target") && t != null) {
-            admin.teleportTo(t.getX(), t.getY(), t.getZ()); return;
-        }
-
-        // ── Troll: revive / clear effects / speed / slow ──────────────────────
-        if (action.equals("revive") && t != null && g != null) {
-            g.adminRevive(t); return;
-        }
-        if (action.equals("clear_effects") && t != null) {
-            t.removeAllEffects(); return;
-        }
-        if (action.equals("speed") && t != null) {
-            t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 400, 2, false, false)); return;
-        }
-        if (action.equals("slow") && t != null) {
-            t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 400, 3, false, false)); return;
-        }
-
-        // ── Game control ──────────────────────────────────────────────────────
-        if (action.equals("end_round_atk") && g != null) { g.adminEndRound(server, true); return; }
-        if (action.equals("end_round_def") && g != null) { g.adminEndRound(server, false); return; }
-        if (action.equals("skip_buy") && g != null)      { g.adminSkipBuyPhase(); return; }
-        if (action.equals("end_game") && g != null)      { g.adminForceEndGame(server); return; }
-        if (action.equals("revive_all") && g != null)    { g.adminReviveAll(server); return; }
-        if (action.equals("refill_all_ammo") && g != null) { g.adminRefillAllAmmo(server); return; }
-        if (action.equals("start_round") && g != null)   { g.adminSkipBuyPhase(); return; }
-        if (action.equals("pause") && g != null)         {
-            admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§7Pause not yet implemented."));
-            return;
-        }
-        if (action.equals("resume") && g != null)        {
-            admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§7Resume not yet implemented."));
-            return;
-        }
-        if (action.equals("balance_teams") && g != null) {
-            admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§7Balance teams not yet implemented."));
-            return;
-        }
-
-        // ── Spawn management ──────────────────────────────────────────────────
-        SpawnConfigManager sc = SpawnConfigManager.getInstance();
-        Vec3 adminPos = admin.position();
-        if (action.equals("spawn_add_atk"))   { sc.addAttacker(adminPos); admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cATK spawn added at " + fmtVec(adminPos))); return; }
-        if (action.equals("spawn_add_def"))   { sc.addDefender(adminPos); admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§bDEF spawn added at " + fmtVec(adminPos))); return; }
-        if (action.equals("spawn_clear_atk")) { sc.clearAttacker(); admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cATK spawns cleared.")); return; }
-        if (action.equals("spawn_clear_def")) { sc.clearDefender(); admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§bDEF spawns cleared.")); return; }
-        if (action.equals("spawn_save")) {
-            admin.sendSystemMessage(net.minecraft.network.chat.Component.literal("§aSpawns auto-saved (JSON updated)."));
-            return;
-        }
-
-        // tp_to_spawn_atk_0, tp_to_spawn_def_2, etc.
-        if (action.startsWith("tp_to_spawn_")) {
-            String[] parts = action.split("_");
-            if (parts.length >= 5) {
-                boolean isAtk = parts[3].equals("atk");
-                int idx = Integer.parseInt(parts[4]);
-                List<Vec3> spawns = isAtk ? sc.getAttackerSpawns() : sc.getDefenderSpawns();
-                if (idx < spawns.size()) {
-                    Vec3 sp = spawns.get(idx);
-                    admin.teleportTo(sp.x, sp.y, sp.z);
-                }
+        if (KEY_MAP != null && KEY_MAP.consumeClick()) {
+            if (ValorantHudState.mapList != null && !ValorantHudState.mapList.isEmpty()) {
+                client.execute(() -> client.setScreen(
+                        new MapSelectScreen(ValorantHudState.mapList, ValorantHudState.currentMap)));
+            } else {
+                client.player.connection.sendCommand("vmap list");
             }
         }
     }
 
-    private static String fmtVec(Vec3 v) {
-        return String.format("%.0f, %.0f, %.0f", v.x, v.y, v.z);
+    private static void checkKey(Minecraft client, KeyMapping kb, String command) {
+        if (kb == null) return;
+        while (kb.consumeClick()) {
+            assert client.player != null;
+            client.player.connection.sendCommand(command);
+        }
+    }
+
+    @SubscribeEvent
+    public void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+        sendToServer(new HelloPayload("1.0.0"));
+    }
+
+    @SubscribeEvent
+    public void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        ValorantHudState.clear();
     }
 }

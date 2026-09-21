@@ -1,32 +1,34 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
-public record MapSelectPayload(List<String> maps, String currentMap) implements CustomPacketPayload {
+public record MapSelectPayload(List<String> maps, String currentMap) {
 
-    public static final CustomPacketPayload.Type<MapSelectPayload> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "mapselect"));
+    public static void encode(MapSelectPayload msg, FriendlyByteBuf buf) {
+        buf.writeInt(msg.maps.size());
+        for (String m : msg.maps) buf.writeUtf(m);
+        buf.writeUtf(msg.currentMap != null ? msg.currentMap : "");
+    }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, MapSelectPayload> CODEC = StreamCodec.of(
-            (buf, value) -> {
-                buf.writeVarInt(value.maps().size());
-                for (String m : value.maps()) buf.writeUtf(m);
-                buf.writeUtf(value.currentMap());
-            },
-            buf -> {
-                int size = buf.readVarInt();
-                List<String> maps = new ArrayList<>(size);
-                for (int i = 0; i < size; i++) maps.add(buf.readUtf());
-                return new MapSelectPayload(maps, buf.readUtf());
-            }
-    );
+    public static MapSelectPayload decode(FriendlyByteBuf buf) {
+        int count = buf.readInt();
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < count; i++) list.add(buf.readUtf(256));
+        String cur = buf.readUtf(256);
+        return new MapSelectPayload(list, cur);
+    }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public static void handle(MapSelectPayload msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+        NetworkEvent.Context ctx = ctxSupplier.get();
+        ctx.enqueueWork(() -> {
+            ValorantHudState.mapList    = msg.maps;
+            ValorantHudState.currentMap = msg.currentMap;
+        });
+        ctx.setPacketHandled(true);
+    }
 }

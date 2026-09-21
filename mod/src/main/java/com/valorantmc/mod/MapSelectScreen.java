@@ -1,8 +1,5 @@
 package com.valorantmc.mod;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -10,7 +7,6 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
-@Environment(EnvType.CLIENT)
 public class MapSelectScreen extends Screen {
 
     private static final int COLOR_BG     = 0xDD0A0A14;
@@ -52,7 +48,7 @@ public class MapSelectScreen extends Screen {
 
     private void voteMap(String map) {
         current = map;
-        ClientPlayNetworking.send(new MapVotePayload(map));
+        ValorantMCMod.sendToServer(new MapVotePayload(map));
         clearWidgets();
         init();
     }

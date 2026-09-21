@@ -1,20 +1,22 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
-public record MapVotePayload(String mapName) implements CustomPacketPayload {
+import java.util.function.Supplier;
 
-    public static final CustomPacketPayload.Type<MapVotePayload> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "mapvote"));
+public record MapVotePayload(String mapName) {
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, MapVotePayload> CODEC = StreamCodec.of(
-            (buf, value) -> buf.writeUtf(value.mapName()),
-            buf -> new MapVotePayload(buf.readUtf())
-    );
+    public static void encode(MapVotePayload msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.mapName);
+    }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public static MapVotePayload decode(FriendlyByteBuf buf) {
+        return new MapVotePayload(buf.readUtf(256));
+    }
+
+    public static void handle(MapVotePayload msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+        NetworkEvent.Context ctx = ctxSupplier.get();
+        ctx.setPacketHandled(true);
+    }
 }

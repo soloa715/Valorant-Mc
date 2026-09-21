@@ -1,7 +1,5 @@
 package com.valorantmc.mod;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -9,7 +7,6 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 
-@Environment(EnvType.CLIENT)
 public class ScoreboardScreen extends Screen {
 
     private record Row(String name, String agent, int kills, int deaths, int assists,
@@ -52,8 +49,8 @@ public class ScoreboardScreen extends Screen {
     @Override public boolean isPauseScreen() { return false; }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mx, int my, float delta) {
-        // Do not render Minecraft's default world blur shader
+    public void renderBackground(GuiGraphics g) {
+        // Do not render Minecraft's default background
     }
 
     @Override

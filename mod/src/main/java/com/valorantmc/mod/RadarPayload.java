@@ -1,20 +1,23 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
-public record RadarPayload(String data) implements CustomPacketPayload {
+import java.util.function.Supplier;
 
-    public static final CustomPacketPayload.Type<RadarPayload> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "radar"));
+public record RadarPayload(String data) {
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, RadarPayload> CODEC = StreamCodec.of(
-            (buf, value) -> buf.writeUtf(value.data(), 512),
-            buf -> new RadarPayload(buf.readUtf(512))
-    );
+    public static void encode(RadarPayload msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.data != null ? msg.data : "");
+    }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public static RadarPayload decode(FriendlyByteBuf buf) {
+        return new RadarPayload(buf.readUtf(2048));
+    }
+
+    public static void handle(RadarPayload msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+        NetworkEvent.Context ctx = ctxSupplier.get();
+        ctx.enqueueWork(() -> ValorantHudState.radarData = msg.data);
+        ctx.setPacketHandled(true);
+    }
 }

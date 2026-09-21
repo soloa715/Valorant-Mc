@@ -1,56 +1,56 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
-/**
- * Server → Client: full admin panel state snapshot.
- *
- * players  : "name:uuid:hp:shield:credits:agent:team"  (one per player)
- * spawns   : "atk:x,y,z" or "def:x,y,z"
- * gameState: e.g. "ROUND_ACTIVE" or "WAITING"
- * round    : current round number
- * mapName  : e.g. "Haven" or "Arena"
- * mapList  : comma-joined list of available maps
- */
 public record AdminSyncPayload(
         List<String> players,
         List<String> spawns,
         String gameState,
         int round,
-        String mapName,
-        String mapList
-) implements CustomPacketPayload {
+        String mapName
+) {
+    public static void encode(AdminSyncPayload msg, FriendlyByteBuf buf) {
+        buf.writeInt(msg.players.size());
+        for (String p : msg.players) buf.writeUtf(p);
 
-    public static final CustomPacketPayload.Type<AdminSyncPayload> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "adminsync"));
+        buf.writeInt(msg.spawns.size());
+        for (String s : msg.spawns) buf.writeUtf(s);
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, AdminSyncPayload> CODEC = StreamCodec.of(
-            (buf, v) -> {
-                buf.writeVarInt(v.players().size());
-                for (String s : v.players()) buf.writeUtf(s);
-                buf.writeVarInt(v.spawns().size());
-                for (String s : v.spawns()) buf.writeUtf(s);
-                buf.writeUtf(v.gameState());
-                buf.writeVarInt(v.round());
-                buf.writeUtf(v.mapName());
-                buf.writeUtf(v.mapList());
-            },
-            buf -> {
-                int pSize = buf.readVarInt();
-                List<String> players = new ArrayList<>(pSize);
-                for (int i = 0; i < pSize; i++) players.add(buf.readUtf());
-                int sSize = buf.readVarInt();
-                List<String> spawns = new ArrayList<>(sSize);
-                for (int i = 0; i < sSize; i++) spawns.add(buf.readUtf());
-                return new AdminSyncPayload(players, spawns, buf.readUtf(), buf.readVarInt(), buf.readUtf(), buf.readUtf());
+        buf.writeUtf(msg.gameState != null ? msg.gameState : "");
+        buf.writeInt(msg.round);
+        buf.writeUtf(msg.mapName != null ? msg.mapName : "");
+    }
+
+    public static AdminSyncPayload decode(FriendlyByteBuf buf) {
+        int pCount = buf.readInt();
+        List<String> pList = new ArrayList<>();
+        for (int i = 0; i < pCount; i++) pList.add(buf.readUtf(256));
+
+        int sCount = buf.readInt();
+        List<String> sList = new ArrayList<>();
+        for (int i = 0; i < sCount; i++) sList.add(buf.readUtf(256));
+
+        String state = buf.readUtf(256);
+        int round    = buf.readInt();
+        String map   = buf.readUtf(256);
+
+        return new AdminSyncPayload(pList, sList, state, round, map);
+    }
+
+    public static void handle(AdminSyncPayload msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+        NetworkEvent.Context ctx = ctxSupplier.get();
+        ctx.enqueueWork(() -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (!(mc.screen instanceof AdminScreen)) {
+                mc.setScreen(new AdminScreen(msg));
             }
-    );
-
-    @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+        });
+        ctx.setPacketHandled(true);
+    }
 }

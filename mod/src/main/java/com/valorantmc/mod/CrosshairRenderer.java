@@ -1,11 +1,8 @@
 package com.valorantmc.mod;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.GuiGraphics;
 
 /** Renders a Valorant-style crosshair: 4 lines + center dot, with a configurable gap. */
-@Environment(EnvType.CLIENT)
 public final class CrosshairRenderer {
 
     private static final int GAP    = 4;

@@ -1,8 +1,5 @@
 package com.valorantmc.mod;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -10,7 +7,6 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
-@Environment(EnvType.CLIENT)
 public class AgentSelectScreen extends Screen {
 
     // Agent role colours (hex ARGB)
@@ -77,14 +73,24 @@ public class AgentSelectScreen extends Screen {
             addRenderableWidget(btn);
         }
 
-        addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose())
-                .bounds(width / 2 - 30, height - 28, 60, 20)
-                .build());
+        boolean hasSelected = myAgent != null && !myAgent.isEmpty();
+        Button lockInBtn = Button.builder(
+                Component.literal(hasSelected ? "\u00a7a\u00a7lLOCK IN (" + myAgent + ")" : "\u00a77Select an Agent"),
+                b -> {
+                    if (myAgent != null && !myAgent.isEmpty()) {
+                        ValorantMCMod.sendToServer(new AgentChoicePayload(myAgent));
+                        onClose();
+                    }
+                })
+                .bounds(width / 2 - 65, height - 30, 130, 22)
+                .build();
+        lockInBtn.active = hasSelected;
+        addRenderableWidget(lockInBtn);
     }
 
     private void selectAgent(String agent) {
         myAgent = agent;
-        ClientPlayNetworking.send(new AgentChoicePayload(agent));
+        ValorantMCMod.sendToServer(new AgentChoicePayload(agent));
         buildButtons();
     }
 

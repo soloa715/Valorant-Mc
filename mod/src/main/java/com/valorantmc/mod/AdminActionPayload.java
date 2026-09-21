@@ -1,19 +1,23 @@
 package com.valorantmc.mod;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
-public record AdminActionPayload(String action, String targetUUID) implements CustomPacketPayload {
+import java.util.function.Supplier;
 
-    public static final CustomPacketPayload.Type<AdminActionPayload> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ValorantMCMod.MOD_ID, "adminaction"));
+public record AdminActionPayload(String action, String targetUUID) {
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, AdminActionPayload> CODEC = StreamCodec.of(
-            (buf, v) -> { buf.writeUtf(v.action()); buf.writeUtf(v.targetUUID()); },
-            buf -> new AdminActionPayload(buf.readUtf(), buf.readUtf())
-    );
+    public static void encode(AdminActionPayload msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.action);
+        buf.writeUtf(msg.targetUUID != null ? msg.targetUUID : "");
+    }
 
-    @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public static AdminActionPayload decode(FriendlyByteBuf buf) {
+        return new AdminActionPayload(buf.readUtf(256), buf.readUtf(256));
+    }
+
+    public static void handle(AdminActionPayload msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+        NetworkEvent.Context ctx = ctxSupplier.get();
+        ctx.setPacketHandled(true);
+    }
 }
