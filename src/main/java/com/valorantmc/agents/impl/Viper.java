@@ -200,10 +200,12 @@ public class Viper extends Agent {
             int ticks = 0;
             @Override public void run() {
                 if (ticks >= 300) { cancel(); return; }
-                // Pit visual
-                for (double angle = 0; angle < 2 * Math.PI; angle += 0.3) {
-                    Location edge = center.clone().add(Math.cos(angle) * 8, 0, Math.sin(angle) * 8);
-                    edge.getWorld().spawnParticle(Particle.DRIP_WATER, edge, 2, 0, 1, 0, 0.02);
+                // Pit visual (throttled spatial check)
+                if (!center.getWorld().getNearbyPlayers(center, 48).isEmpty()) {
+                    for (double angle = 0; angle < 2 * Math.PI; angle += 0.4) {
+                        Location edge = center.clone().add(Math.cos(angle) * 8, 0, Math.sin(angle) * 8);
+                        edge.getWorld().spawnParticle(Particle.DRIP_WATER, edge, 2, 0, 1, 0, 0.02);
+                    }
                 }
                 // Damage enemies in pit
                 for (Player p : center.getWorld().getPlayers()) {
