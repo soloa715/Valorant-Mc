@@ -49,6 +49,7 @@ public class AgentManager {
         register(new Chamber());
         register(new Fade());
         register(new Gekko());
+        register(new Clove());
     }
 
     private void register(Agent agent) {

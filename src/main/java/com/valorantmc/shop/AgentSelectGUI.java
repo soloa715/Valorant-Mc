@@ -32,6 +32,7 @@ public class AgentSelectGUI {
             case "viper"     -> Material.GREEN_CONCRETE;
             case "brimstone" -> Material.RED_CONCRETE;
             case "breach"    -> Material.ORANGE_CONCRETE;
+            case "clove"     -> Material.MAGENTA_CONCRETE;
             default          -> Material.WHITE_CONCRETE;
         };
     }

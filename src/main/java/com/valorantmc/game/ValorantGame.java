@@ -607,6 +607,10 @@ public class ValorantGame {
 
         victim.setHealth(20);
         victim.setGameMode(GameMode.SPECTATOR);
+
+        // Clove death hook
+        Agent victimAgent = playerAgents.get(victim.getUniqueId());
+        com.valorantmc.agents.impl.Clove.handlePlayerDeath(victim, victimAgent);
         // Lock spectator to a living teammate so they can't free-fly or watch enemies
         ValorantTeam victimTeam2 = getTeam(victim);
         if (victimTeam2 != null) {
